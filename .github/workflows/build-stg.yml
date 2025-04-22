@@ -1,0 +1,54 @@
+name: Build and Deploy to Prd
+
+on:
+  # Also trigger on page_build, as well as release created eventss
+  release:
+    types: [prereleased]
+     
+# Environment variables available to all jobs and steps in this workflow
+env:
+  GKE_PROJECT: gis-stg
+  #GKE_EMAIL: ${{ secrets.GKE_EMAIL_STG }}
+  GKE_KEY: ${{ secrets.GKE_KEY_STG }}
+  GITHUB_SHA: ${{ github.tag }}
+  IMAGE: tenderapi
+  REGISTRY_HOSTNAME: asia.gcr.io
+  RUN_REGION: asia-east1
+  SOURCE_TAG: ${{ github.event.release.tag_name }}
+  PROJECT_NAME: "#tenderAPI"
+  RELEASE_NOTE: ${{ github.event.release.body }}
+
+jobs:
+
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Setup python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+      
+     # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0
+      with:
+        version: '318.0.0'
+        project_id: ${{ secrets.GKE_PROJECT_STG }}
+#        service_account_email: ${{ secrets.GKE_EMAIL }}
+        service_account_key: ${{ secrets.GKE_KEY_STG }}
+
+    # Build and push image to Google Container Registry
+    - name: Build
+      run: |-           
+        gcloud builds submit \
+          --quiet \
+          --tag "asia.gcr.io/$GKE_PROJECT/$IMAGE:$SOURCE_TAG"
+ 
+    # send msg to telegram       
+    - name: curl
+      run : |
+          curl -d "@RELEASE_NOTE.txt" -X POST "https://api.telegram.org/bot5569537141:AAEs0sa_vj3nL6XKPztjtkUMnawvkeCcB3E/sendMessage?chat_id=-1001713684603" \
+          -d "text=github通知:打包完成 %0a Project:$GKE_PROJECT %0a IMAGE:$IMAGE:$SOURCE_TAG %0a releaseNote: %0a $RELEASE_NOTE"

@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <style>
+        .content-wrapper {
+                padding: 4vh 5vw;
+            }    
+        .session {
+                padding-bottom: 30px;
+            }
+        .session.content {
+                font-size: 1rem;
+                color: rgb(149, 149, 149)
+            }
+        </style>
+    </head>
+    <body class="content-wrapper">
+        <div class="session">
+            <h1>{{title}}</h1>
+            <div class="content">{{message}}</div>
+        </div>
+        <div>
+            <div>{{>rules}}</div>
+        </div>
+        <div>
+            <div>{{>rules rules=stopService}}</div>
+        </div>
+    </body>
+</html>

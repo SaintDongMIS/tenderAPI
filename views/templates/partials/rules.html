@@ -1,0 +1,20 @@
+
+<div>
+    <h2>{{rules.title}} </h2>
+    {{#each rules.list}}
+        <div>
+            <ul>
+                <li class="content"> {{@index}}. {{this}} </li>
+            </ul>
+        </div>
+    {{/each}}
+</div>
+
+<head>
+    <style>
+    .content {
+            font-size: 1rem;
+            color: rgb(149, 149, 149)
+        }
+    </style>
+</head>

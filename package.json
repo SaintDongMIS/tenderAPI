@@ -1,0 +1,52 @@
+{
+  "name": "tenderapi",
+  "version": "1.3.34",
+  "description": "This Project is using for tender admin ",
+  "main": "server.js",
+  "repository": "",
+  "author": "howard",
+  "private": true,
+  "dependencies": {
+    "@google-cloud/storage": "^6.9.1",
+    "@hapi/basic": "6.0.0",
+    "@hapi/boom": "9.1.4",
+    "@hapi/h2o2": "^10.0.0",
+    "@hapi/hapi": "20.2.1",
+    "@hapi/inert": "^6.0.5",
+    "@hapi/vision": "^6.1.0",
+    "@hapi/wreck": "^18.0.0",
+    "bcrypt": "^5.1.0",
+    "blipp": "^4.0.2",
+    "dotenv": "^16.0.0",
+    "form-data": "^4.0.0",
+    "hapi-auth-bearer-token": "^8.0.0",
+    "hapi-cron": "^1.0.5",
+    "hapi-mysql2": "^2.6.1",
+    "hapi-pino": "^9.3.0",
+    "hapi-postgres-connection": "^7.0.0",
+    "hapi-swagger": "^14.5.5",
+    "iconv-lite": "^0.6.3",
+    "joi": "^17.6.0",
+    "luxon": "^3.0.1",
+    "mssql": "^9.0.0",
+    "node-telegram-bot-api": "^0.56.0",
+    "qs": "^6.11.0",
+    "sharp": "^0.32.5",
+    "superagent": "^8.0.3",
+    "twilio": "^3.76.1",
+    "urlencode": "^1.1.0"
+  },
+  "stg": {
+    "project": "gis-stg"
+  },
+  "prd": {
+    "project": "gis-prd"
+  },
+  "scripts": {
+    "start": "node -r dotenv/config server.js dotenv_config_path=env/.env",
+    "stg": "node -r dotenv/config server.js dotenv_config_path=env/stg.env",
+    "prd": "node -r dotenv/config server.js dotenv_config_path=env/prd.env",
+    "build:stg": "gcloud config set project gis-stg && gcloud builds submit --tag asia.gcr.io/gis-stg/tenderapi:v1.3.35",
+    "build:prd": "gcloud config set project gis-prd && gcloud builds submit --tag asia.gcr.io/gis-prd/tenderapi:v1.3.35"
+  }
+}
