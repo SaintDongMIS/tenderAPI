@@ -151,7 +151,7 @@ exports.plugin = {
 			},
 			handler: async function (request, h) {
 				let { zipCode, timeStart, timeEnd } = request.query;
-				if (timeStart.length == 0) timeStart = DateTime.fromISO("2022-06-01").toFormat("yyyy-MM-dd");
+				if (timeStart.length == 0) timeStart = DateTime.fromISO("2024-01-01").toFormat("yyyy-MM-dd");
 				if (timeEnd.length == 0) timeEnd = DateTime.now().toFormat("yyyy-MM-dd");
 				// console.log(timeStart, timeEnd);
 
@@ -205,7 +205,7 @@ exports.plugin = {
 			},
 			handler: async function (request, h) {
 				const { zipCode } = request.query;
-				const start = DateTime.fromISO("2022-06-01");
+				const start = DateTime.fromISO("2024-01-01");
 				const { months: monthDiff } = start.diffNow(["months"]).toObject();
 
 				if (![103, 104].includes(zipCode)) {
@@ -231,7 +231,7 @@ exports.plugin = {
 					GROUP BY datestar`;
 				}
 				sqlCMD += ` ORDER BY datestar`;
-				
+				console.log(sqlCMD);
 				const { rows: result } = await request.pg.client.query(sqlCMD);
 
 				return {
@@ -263,7 +263,7 @@ exports.plugin = {
 			handler: async function (request, h) {
 				let { zipCode, timeStart, timeEnd } = request.query;
 				if (timeStart.length == 0) {
-					timeStart = (zipCode == 104) ? DateTime.fromISO("2022-06-01").toFormat("yyyy-MM-dd") : DateTime.fromISO("2023-02-01").toFormat("yyyy-MM-dd");
+					timeStart = (zipCode == 104) ? DateTime.fromISO("2024-01-01").toFormat("yyyy-MM-dd") : DateTime.fromISO("2024-01-01").toFormat("yyyy-MM-dd");
 				}
 				if (timeEnd.length == 0) timeEnd = DateTime.now().toFormat("yyyy-MM-dd");
 

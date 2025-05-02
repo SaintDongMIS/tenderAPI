@@ -31,6 +31,11 @@ const server = Hapi.server({
 	},
 });
 
+server.ext("onRequest", function (request, h) {
+    console.log(`[API Request] ${request.method.toUpperCase()} ${request.path}`);
+    return h.continue;
+});
+
 server.ext("onPreResponse", function (request, reply) {
 	const response = request.response;
 	if (response && response.header && typeof response.header === "function") {
