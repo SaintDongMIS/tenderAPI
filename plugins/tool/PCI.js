@@ -4,62 +4,73 @@
 const Joi = require('joi');
 const Boom = require('@hapi/boom');
 const Wreck = require('@hapi/wreck');
+const superagent = require('superagent');
 const pciCal = require('../../utils/pciCal');
 const { rows } = require('mssql');
 
-const authStrategy = false; 
+const authStrategy = false;
 //const authStrategy = 'simple';
 
 exports.plugin = {
-	//pkg: require('./package.json'),
-	name: 'PCItool',
-	version: '0.0.0',
-	register: async function (server, options) {
-		// ----------------------------------------------------------------------------------------------------
-		server.route({
-			method: 'POST',
-			path: '/pciTool/reset',
-			options: {
-				description: '重置PCI',
-				//auth: { strategy: 'auth', scope: ['roles'] },
-				//auth: { strategy: 'bearer', scope: ['roles'] },
-				cors: { origin: ['*'], credentials: true },
-				tags: ['api'],
-				validate: { payload: Joi.object({
-					tenderId: Joi.number().required().description("Tenders tenderId"),
-					surveyId: Joi.number().required().description("TendersSurvey id"),
-					pciValue: Joi.number().allow(-1, 0, 100).default(0).description("PCI值: 0為重算"),
-				}) }   // POST
-			},
-			handler: async function (request, h) {
-				// param 參數
-				const { tenderId, surveyId, pciValue } = request.payload;  //POST
-				let pciTableName = await server.methods.tender.getPCITable(tenderId);
-				pciTableName = pciTableName.replace(/_0$|_00$/g, "");
-				if (pciTableName.length == 0) return Boom.notAcceptable("Non-allow Tender");
+  //pkg: require('./package.json'),
+  name: 'PCItool',
+  version: '0.0.0',
+  register: async function (server, options) {
+    // ----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'POST',
+      path: '/pciTool/reset',
+      options: {
+        description: '重置PCI',
+        //auth: { strategy: 'auth', scope: ['roles'] },
+        //auth: { strategy: 'bearer', scope: ['roles'] },
+        cors: { origin: ['*'], credentials: true },
+        tags: ['api'],
+        validate: {
+          payload: Joi.object({
+            tenderId: Joi.number().required().description('Tenders tenderId'),
+            surveyId: Joi.number().required().description('TendersSurvey id'),
+            pciValue: Joi.number()
+              .allow(-1, 0, 100)
+              .default(0)
+              .description('PCI值: 0為重算'),
+          }),
+        }, // POST
+      },
+      handler: async function (request, h) {
+        // param 參數
+        const { tenderId, surveyId, pciValue } = request.payload; //POST
+        let pciTableName = await server.methods.tender.getPCITable(tenderId);
+        pciTableName = pciTableName.replace(/_0$|_00$/g, '');
+        if (pciTableName.length == 0)
+          return Boom.notAcceptable('Non-allow Tender');
 
-				// SQL CMD
-				if (pciValue == 100) {
-					await request.pg.client.query(
-						`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = 100, "updatedAt" = NOW() WHERE "PCI_real" = -1`);
-				} else await request.pg.client.query(`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1`);
+        // SQL CMD
+        if (pciValue == 100) {
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = 100, "updatedAt" = NOW() WHERE "PCI_real" = -1`
+          );
+        } else
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1`
+          );
 
-				if (pciValue == 0) {
-					// 計算PCI
-					const { rows: res_block } = await request.pg.client.query(
-						`SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" ORDER BY "block_id"`
-					);
+        if (pciValue == 0) {
+          // 計算PCI
+          const { rows: res_block } = await request.pg.client.query(
+            `SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" ORDER BY "block_id"`
+          );
 
-					const caseTableCol = 
-						`SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
+          const caseTableCol = `SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
 						SUM ( ROUND( ST_Area ( ST_Intersection ( "${pciTableName}"."wkb_geometry", "caseList"."geom" )::geography )::numeric, 2 ) ) AS "case_area" `;
-					const leftJoinFilter = 
-						`( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
+          const leftJoinFilter = `( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
 						OR ( "caseList"."wkb_geometry" IS NULL AND ( ST_Intersects ( "caseList"."geom", "${pciTableName}"."wkb_geometry" ) ) ) `;
-					const blockFilter = /^999/.test(tenderId) ? '' : ` AND "${pciTableName}"."道路名稱" !~ '高架|跨越橋'`;
-						
-					const { rows: res_case } = await request.pg.client.query(
-						`SELECT 
+          const blockFilter = /^999/.test(tenderId)
+            ? ''
+            : ` AND "${pciTableName}"."道路名稱" !~ '高架|跨越橋'`;
+
+          const { rows: res_case } = await request.pg.client.query(
+            `SELECT 
 							"${pciTableName}"."ogc_fid" AS "block_id",
 							"${pciTableName}"."pci_id",
 							REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REGEXP_REPLACE ( REPLACE ( REPLACE ( REPLACE ( "caseList"."distressType", '龜裂', '1' ), '縱橫裂縫', '2' ), '塊狀裂縫', '3' ), '坑洞|人孔高差|薄層剝離', '4' ), '車轍', '5' ), '補綻及管線回填', '6' ), '推擠', '7' ), '隆起與凹陷', '8' ), '冒油', '9' ), '波浪狀鋪面', '10' ), '車道與路肩分離', '11' ), '滑溜裂縫', '12' ), '骨材剝落', '13' ) AS "PCI_class",
@@ -78,113 +89,139 @@ exports.plugin = {
 						GROUP BY
 							"pci_id", "block_id", "PCI_class", "case_level"
 						ORDER BY "block_id", "PCI_class", "case_level"`,
-						[ surveyId ]
-					);
+            [surveyId]
+          );
 
-					// Step1: 計算折減值(DV)
-					let blockDVObj = {}; 
-					for (const caseSpec of res_case) {
-						if (!blockDVObj.hasOwnProperty(caseSpec.block_id)) blockDVObj[caseSpec.block_id] = [];
-						const block_area = res_block.filter(block => block.block_id == caseSpec.block_id)[0].block_area;
+          // Step1: 計算折減值(DV)
+          let blockDVObj = {};
+          for (const caseSpec of res_case) {
+            if (!blockDVObj.hasOwnProperty(caseSpec.block_id))
+              blockDVObj[caseSpec.block_id] = [];
+            const block_area = res_block.filter(
+              (block) => block.block_id == caseSpec.block_id
+            )[0].block_area;
 
-						let density = 0;
-						if (caseSpec.PCI_class == "4") density = (caseSpec.case_num / block_area) * 100;
-						else if (["2", "11"].includes(caseSpec.PCI_class)) density = (caseSpec.case_length / block_area) * 100;
-						else density = (caseSpec.case_area / block_area) * 100;
+            let density = 0;
+            if (caseSpec.PCI_class == '4')
+              density = (caseSpec.case_num / block_area) * 100;
+            else if (['2', '11'].includes(caseSpec.PCI_class))
+              density = (caseSpec.case_length / block_area) * 100;
+            else density = (caseSpec.case_area / block_area) * 100;
 
-						// console.log(caseSpec.pci_id, caseSpec.PCI_class, caseSpec.case_level);
-						const dv = pciCal.calDV(caseSpec.PCI_class, caseSpec.case_level, density);
-						// console.log(density, dv);
+            // console.log(caseSpec.pci_id, caseSpec.PCI_class, caseSpec.case_level);
+            const dv = pciCal.calDV(
+              caseSpec.PCI_class,
+              caseSpec.case_level,
+              density
+            );
+            // console.log(density, dv);
 
-						if(dv > 0) blockDVObj[caseSpec.block_id].push({ PCI_class: caseSpec.PCI_class, case_level: caseSpec.case_level, density, dv });
-						// else {
-						// 	console.log(caseSpec);
-						// 	// const levelMap = { 1: "L", 2: "M", 3: "H" };
-						// 	// console.log(`func${String(caseSpec.PCI_class).padStart(2, '0')}${levelMap[caseSpec.case_level]}`);
-						// 	console.log(density, dv);
-						// }
+            if (dv > 0)
+              blockDVObj[caseSpec.block_id].push({
+                PCI_class: caseSpec.PCI_class,
+                case_level: caseSpec.case_level,
+                density,
+                dv,
+              });
+            // else {
+            // 	console.log(caseSpec);
+            // 	// const levelMap = { 1: "L", 2: "M", 3: "H" };
+            // 	// console.log(`func${String(caseSpec.PCI_class).padStart(2, '0')}${levelMap[caseSpec.case_level]}`);
+            // 	console.log(density, dv);
+            // }
 
-						// if (dv > 0 && dv < 2) {
-						// 	console.log(caseSpec);
-						// 	console.log(density, dv);
-						// }
-					}
-					// console.log(blockDVObj);
-					// Object.keys(blockDVObj).forEach(key => blockDVObj[key].sort((a, b) => (b.dv - a.dv)));
+            // if (dv > 0 && dv < 2) {
+            // 	console.log(caseSpec);
+            // 	console.log(density, dv);
+            // }
+          }
+          // console.log(blockDVObj);
+          // Object.keys(blockDVObj).forEach(key => blockDVObj[key].sort((a, b) => (b.dv - a.dv)));
 
-					// Step2: 計算PCI
-					for(const [ blockId, blockDV ] of Object.entries(blockDVObj)) {
-						// let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
-						let { PCI } = pciCal.calPCI(blockDV.map(block => block.dv));
-						let pci = Math.round(PCI * 10) / 10;
-						// 去除 > 100 or < 0 不合理情形
-						pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
-						// console.log(blockId, pci);
-						// console.log(pci);
+          // Step2: 計算PCI
+          for (const [blockId, blockDV] of Object.entries(blockDVObj)) {
+            // let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
+            let { PCI } = pciCal.calPCI(blockDV.map((block) => block.dv));
+            let pci = Math.round(PCI * 10) / 10;
+            // 去除 > 100 or < 0 不合理情形
+            pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
+            // console.log(blockId, pci);
+            // console.log(pci);
 
-						await request.pg.client.query(
-							`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
-							[ pci, blockId ]
-						);
-					}
-				}
+            await request.pg.client.query(
+              `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
+              [pci, blockId]
+            );
+          }
+        }
 
-				// return
-				return { 
-					statusCode: 20000, 
-					message: 'successful'
-				};
-			},
-		});
+        // return
+        return {
+          statusCode: 20000,
+          message: 'successful',
+        };
+      },
+    });
 
-		// ----------------------------------------------------------------------------------------------------
-		server.route({
-			method: 'PUT',
-			path: '/pciTool/update',
-			options: {
-				description: '更新PCI(個別)',
-				//auth: { strategy: 'auth', scope: ['roles'] },
-				//auth: { strategy: 'bearer', scope: ['roles'] },
-				cors: { origin: ['*'], credentials: true },
-				tags: ['api'],
-				validate: { payload : Joi.object({
-					tenderId: Joi.number().required().description("Tenders tenderId"),
-					surveyId: Joi.number().required().description("TendersSurvey id"),
-					pciValue: Joi.number().allow(-1, 0, 100).required().description("PCI值: 0為重算"),
-					blockId: Joi.string().required().description("pci_id"),
-				}) }   // PUT
-			},
-			handler: async function (request, h) {
-				// param 參數
-				const { tenderId, surveyId, pciValue, blockId } = request.payload;  //POST
-				let pciTableName = await server.methods.tender.getPCITable(tenderId);
-				pciTableName = pciTableName.replace(/_0$|_00$/g, "");
-				if (pciTableName.length == 0) return Boom.notAcceptable("Non-allow Tender");
+    // ----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'PUT',
+      path: '/pciTool/update',
+      options: {
+        description: '更新PCI(個別)',
+        //auth: { strategy: 'auth', scope: ['roles'] },
+        //auth: { strategy: 'bearer', scope: ['roles'] },
+        cors: { origin: ['*'], credentials: true },
+        tags: ['api'],
+        validate: {
+          payload: Joi.object({
+            tenderId: Joi.number().required().description('Tenders tenderId'),
+            surveyId: Joi.number().required().description('TendersSurvey id'),
+            pciValue: Joi.number()
+              .allow(-1, 0, 100)
+              .required()
+              .description('PCI值: 0為重算'),
+            blockId: Joi.string().required().description('pci_id'),
+          }),
+        }, // PUT
+      },
+      handler: async function (request, h) {
+        // param 參數
+        const { tenderId, surveyId, pciValue, blockId } = request.payload; //POST
+        let pciTableName = await server.methods.tender.getPCITable(tenderId);
+        pciTableName = pciTableName.replace(/_0$|_00$/g, '');
+        if (pciTableName.length == 0)
+          return Boom.notAcceptable('Non-allow Tender');
 
-				let res = [];
-				const data = [];
-				const reductionVal = []; // 存入折減值, 加總, 修正折減值
+        let res = [];
+        const data = [];
+        const reductionVal = []; // 存入折減值, 加總, 修正折減值
 
-				// SQL CMD
-				if (pciValue != 0) await request.pg.client.query(`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "pci_id" = $2`, [ pciValue, blockId ]);
-				else {
-					await request.pg.client.query(`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1 WHERE "pci_id" = $1`, [ blockId ]);
+        // SQL CMD
+        if (pciValue != 0)
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "pci_id" = $2`,
+            [pciValue, blockId]
+          );
+        else {
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1 WHERE "pci_id" = $1`,
+            [blockId]
+          );
 
-					// 計算PCI
-					const { rows: res_block } = await request.pg.client.query(
-						`SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" WHERE "pci_id" = $1`,
-						[ blockId ]
-					);
-	
-					const caseTableCol =
-						`SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
+          // 計算PCI
+          const { rows: res_block } = await request.pg.client.query(
+            `SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" WHERE "pci_id" = $1`,
+            [blockId]
+          );
+
+          const caseTableCol = `SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
 						SUM ( ROUND( ST_Area ( ST_Intersection ( "${pciTableName}"."wkb_geometry", "caseList"."geom" )::geography )::numeric, 2 ) ) AS "case_area" `;
-					const leftJoinFilter =
-						`( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
+          const leftJoinFilter = `( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
 						OR ( "caseList"."wkb_geometry" IS NULL AND ( ST_Intersects ( "caseList"."geom", "${pciTableName}"."wkb_geometry" ) ) ) `;
 
-					const { rows: res_case } = await request.pg.client.query(
-						`SELECT 
+          const { rows: res_case } = await request.pg.client.query(
+            `SELECT 
 							"${pciTableName}"."ogc_fid" AS "block_id",
 							"${pciTableName}"."pci_id",
 							REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REGEXP_REPLACE ( REPLACE ( REPLACE ( REPLACE ( "caseList"."distressType", '龜裂', '1' ), '縱橫裂縫', '2' ), '塊狀裂縫', '3' ), '坑洞|人孔高差|薄層剝離', '4' ), '車轍', '5' ), '補綻及管線回填', '6' ), '推擠', '7' ), '隆起與凹陷', '8' ), '冒油', '9' ), '波浪狀鋪面', '10' ), '車道與路肩分離', '11' ), '滑溜裂縫', '12' ), '骨材剝落', '13' ) AS "PCI_class",
@@ -203,134 +240,160 @@ exports.plugin = {
 						GROUP BY
 							"pci_id", "block_id", "PCI_class", "case_level"
 						ORDER BY "block_id", "PCI_class", "case_level"`,
-						[ surveyId, blockId ]
-					);
-					// console.log(res_case);
-					res = res_case;
+            [surveyId, blockId]
+          );
+          // console.log(res_case);
+          res = res_case;
 
-					// Step1: 計算折減值(DV)
-					let blockDVObj = {};
-					for (const caseSpec of res_case) {
-						if (!blockDVObj.hasOwnProperty(caseSpec.block_id)) blockDVObj[caseSpec.block_id] = [];
-						const block_area = res_block.filter(block => block.block_id == caseSpec.block_id)[0].block_area;
+          // Step1: 計算折減值(DV)
+          let blockDVObj = {};
+          for (const caseSpec of res_case) {
+            if (!blockDVObj.hasOwnProperty(caseSpec.block_id))
+              blockDVObj[caseSpec.block_id] = [];
+            const block_area = res_block.filter(
+              (block) => block.block_id == caseSpec.block_id
+            )[0].block_area;
 
-						let density = 0;
-						if (caseSpec.PCI_class == "4") density = (caseSpec.case_num / block_area) * 100;
-						else if (["2", "11"].includes(caseSpec.PCI_class)) density = (caseSpec.case_length / block_area) * 100;
-						else density = (caseSpec.case_area / block_area) * 100;
+            let density = 0;
+            if (caseSpec.PCI_class == '4')
+              density = (caseSpec.case_num / block_area) * 100;
+            else if (['2', '11'].includes(caseSpec.PCI_class))
+              density = (caseSpec.case_length / block_area) * 100;
+            else density = (caseSpec.case_area / block_area) * 100;
 
-						// console.log(caseSpec.pci_id, caseSpec.PCI_class, caseSpec.case_level);
-						const dv = pciCal.calDV(caseSpec.PCI_class, caseSpec.case_level, density);
-						// console.log(density, dv);
-						let level = '';
-						if (caseSpec.case_level == 1) level = 'L';
-						else if (caseSpec.case_level == 2) level = 'M';
-						else level = 'H'
-						
-						data.push({ PCI_class: `${caseSpec.PCI_class}${level}`, density: density, dv: dv });
+            // console.log(caseSpec.pci_id, caseSpec.PCI_class, caseSpec.case_level);
+            const dv = pciCal.calDV(
+              caseSpec.PCI_class,
+              caseSpec.case_level,
+              density
+            );
+            // console.log(density, dv);
+            let level = '';
+            if (caseSpec.case_level == 1) level = 'L';
+            else if (caseSpec.case_level == 2) level = 'M';
+            else level = 'H';
 
-						if (dv > 0) blockDVObj[caseSpec.block_id].push({ PCI_class: caseSpec.PCI_class, case_level: caseSpec.case_level, density, dv });
+            data.push({
+              PCI_class: `${caseSpec.PCI_class}${level}`,
+              density: density,
+              dv: dv,
+            });
 
-						
-					}
-					// console.log(blockDVObj);
-					
+            if (dv > 0)
+              blockDVObj[caseSpec.block_id].push({
+                PCI_class: caseSpec.PCI_class,
+                case_level: caseSpec.case_level,
+                density,
+                dv,
+              });
+          }
+          // console.log(blockDVObj);
 
-					// Step2: 計算PCI
-					for (const [blockId, blockDV] of Object.entries(blockDVObj)) {
-						// let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
-						let { PCI } = pciCal.calPCI(blockDV.map(block => block.dv));
-						let pci = Math.round(PCI * 10) / 10;
-						// 去除 > 100 or < 0 不合理情形
-						pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
-						console.log('pci', pci);
+          // Step2: 計算PCI
+          for (const [blockId, blockDV] of Object.entries(blockDVObj)) {
+            // let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
+            let { PCI } = pciCal.calPCI(blockDV.map((block) => block.dv));
+            let pci = Math.round(PCI * 10) / 10;
+            // 去除 > 100 or < 0 不合理情形
+            pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
+            console.log('pci', pci);
 
-						// console.log(blockId, pci);
-						const { dvListArr, tdvArr, cdvDetails } = pciCal.calPCI(blockDV.map(block => block.dv));
-						// console.log('dv 折減值', dvListArr);
-						// console.log('tdv 加總', tdvArr);
-						// console.log('cdv 修正折減值', cdvDetails);
+            // console.log(blockId, pci);
+            const { dvListArr, tdvArr, cdvDetails } = pciCal.calPCI(
+              blockDV.map((block) => block.dv)
+            );
+            // console.log('dv 折減值', dvListArr);
+            // console.log('tdv 加總', tdvArr);
+            // console.log('cdv 修正折減值', cdvDetails);
 
-						reductionVal.push({
-							'dvListArr': dvListArr,
-							'tdvArr': tdvArr,
-							'cdvDetails': cdvDetails
-						});
-						
-						await request.pg.client.query(
-							`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
-							[ pci, blockId ]
-						);
-					}
-				}
-				
+            reductionVal.push({
+              dvListArr: dvListArr,
+              tdvArr: tdvArr,
+              cdvDetails: cdvDetails,
+            });
 
-				// return
-				return {
-					statusCode: 20000,
-					message: 'successful',
-					data: {
-						res, data, reductionVal
-					}
-				};
-			},
-		});
+            await request.pg.client.query(
+              `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
+              [pci, blockId]
+            );
+          }
+        }
 
-		// ----------------------------------------------------------------------------------------------------
-		server.route({
-			method: 'PUT',
-			path: '/pciTool/updateByName',
-			options: {
-				description: '更新PCI(路名)',
-				//auth: { strategy: 'auth', scope: ['roles'] },
-				//auth: { strategy: 'bearer', scope: ['roles'] },
-				cors: { origin: ['*'], credentials: true },
-				tags: ['api'],
-				validate: {
-					payload: Joi.object({
-						tenderId: Joi.number().required().default(100).description("Tenders tenderId"),
-						surveyId: Joi.number().required().description("TendersSurvey id"),
-						pciValue: Joi.number().allow(-1, 0, 100).required().description("PCI值: 0為重算; 100將-1填100"),
-						roadName: Joi.string().required().description("道路名稱"),
-					})
-				}   // PUT
-			},
-			handler: async function (request, h) {
-				// param 參數
-				const { tenderId, surveyId, pciValue, roadName } = request.payload;  //POST
-				let pciTableName = await server.methods.tender.getPCITable(tenderId);
-				pciTableName = pciTableName.replace(/_0$|_00$/g, "");
-				if (pciTableName.length == 0) return Boom.notAcceptable("Non-allow Tender");
+        // return
+        return {
+          statusCode: 20000,
+          message: 'successful',
+          data: {
+            res,
+            data,
+            reductionVal,
+          },
+        };
+      },
+    });
 
-				// SQL CMD
-				if(pciValue == 100) {
-					await request.pg.client.query(
-						`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = 100, "updatedAt" = NOW() WHERE "道路名稱" = $1 AND "PCI_real" = -1`,
-						[ roadName ]);
-				} else {
-					await request.pg.client.query(
-						`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1, "updatedAt" = NOW() WHERE "道路名稱" = $1`,
-						[ roadName ]);
-				}
+    // ----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'PUT',
+      path: '/pciTool/updateByName',
+      options: {
+        description: '更新PCI(路名)',
+        //auth: { strategy: 'auth', scope: ['roles'] },
+        //auth: { strategy: 'bearer', scope: ['roles'] },
+        cors: { origin: ['*'], credentials: true },
+        tags: ['api'],
+        validate: {
+          payload: Joi.object({
+            tenderId: Joi.number()
+              .required()
+              .default(100)
+              .description('Tenders tenderId'),
+            surveyId: Joi.number().required().description('TendersSurvey id'),
+            pciValue: Joi.number()
+              .allow(-1, 0, 100)
+              .required()
+              .description('PCI值: 0為重算; 100將-1填100'),
+            roadName: Joi.string().required().description('道路名稱'),
+          }),
+        }, // PUT
+      },
+      handler: async function (request, h) {
+        // param 參數
+        const { tenderId, surveyId, pciValue, roadName } = request.payload; //POST
+        let pciTableName = await server.methods.tender.getPCITable(tenderId);
+        pciTableName = pciTableName.replace(/_0$|_00$/g, '');
+        if (pciTableName.length == 0)
+          return Boom.notAcceptable('Non-allow Tender');
 
-				if (pciValue == 0) {
-					// 計算PCI
-					const { rows: res_block } = await request.pg.client.query(
-						`SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" WHERE "道路名稱" = $1`,
-						[ roadName ]
-					);
-					// console.log(res_block);
+        // SQL CMD
+        if (pciValue == 100) {
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = 100, "updatedAt" = NOW() WHERE "道路名稱" = $1 AND "PCI_real" = -1`,
+            [roadName]
+          );
+        } else {
+          await request.pg.client.query(
+            `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = -1, "updatedAt" = NOW() WHERE "道路名稱" = $1`,
+            [roadName]
+          );
+        }
 
-					const caseTableCol =
-						`SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
+        if (pciValue == 0) {
+          // 計算PCI
+          const { rows: res_block } = await request.pg.client.query(
+            `SELECT "${pciTableName}"."ogc_fid" AS "block_id", ST_Area("${pciTableName}"."wkb_geometry"::geography) AS "block_area" FROM "qgis"."${pciTableName}" WHERE "道路名稱" = $1`,
+            [roadName]
+          );
+          // console.log(res_block);
+
+          const caseTableCol = `SUM ( ROUND( ST_Length ( ST_Intersection ( "${pciTableName}"."wkb_geometry", ST_Transform ( "caseList"."wkb_geometry", 4326 ) ), FALSE )::numeric, 2 ) ) AS "case_length",
 						SUM ( ROUND( ST_Area ( ST_Intersection ( "${pciTableName}"."wkb_geometry", "caseList"."geom" )::geography )::numeric, 2 ) ) AS "case_area" `;
-					const leftJoinFilter =
-						`( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
+          const leftJoinFilter = `( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "${pciTableName}"."wkb_geometry" ) ) 
 						OR ( "caseList"."wkb_geometry" IS NULL AND ( ST_Intersects ( "caseList"."geom", "${pciTableName}"."wkb_geometry" ) ) ) `;
 
-					for (const blockSpec of res_block) {
-						const { rows: res_case } = await request.pg.client.query(
-							`SELECT 
+          for (const blockSpec of res_block) {
+            const { rows: res_case } = await request.pg.client.query(
+              `SELECT 
 								"${pciTableName}"."ogc_fid" AS "block_id",
 								REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REGEXP_REPLACE ( REPLACE ( REPLACE ( REPLACE ( "caseList"."distressType", '龜裂', '1' ), '縱橫裂縫', '2' ), '塊狀裂縫', '3' ), '坑洞|人孔高差|薄層剝離', '4' ), '車轍', '5' ), '補綻及管線回填', '6' ), '推擠', '7' ), '隆起與凹陷', '8' ), '冒油', '9' ), '波浪狀鋪面', '10' ), '車道與路肩分離', '11' ), '滑溜裂縫', '12' ), '骨材剝落', '13' ) AS "PCI_class",
 								REPLACE ( REPLACE ( REPLACE ( "caseList"."distressLevel", '輕', '1' ), '中', '2' ), '重', '3' ) AS "case_level",
@@ -348,79 +411,92 @@ exports.plugin = {
 							GROUP BY
 								"block_id", "PCI_class", "case_level"
 							ORDER BY "block_id", "PCI_class", "case_level"`,
-							[ surveyId, blockSpec.block_id ]
-						);
+              [surveyId, blockSpec.block_id]
+            );
 
-						// console.log(res_case);
+            // console.log(res_case);
 
-						// Step1: 計算折減值(DV)
-						let blockDVObj = {};
-						for (const caseSpec of res_case) {
-							if (!blockDVObj.hasOwnProperty(caseSpec.block_id)) blockDVObj[caseSpec.block_id] = [];
-							const block_area = blockSpec.block_area;
+            // Step1: 計算折減值(DV)
+            let blockDVObj = {};
+            for (const caseSpec of res_case) {
+              if (!blockDVObj.hasOwnProperty(caseSpec.block_id))
+                blockDVObj[caseSpec.block_id] = [];
+              const block_area = blockSpec.block_area;
 
-							let density = 0;
-							if (caseSpec.PCI_class == "4") density = (caseSpec.case_num / block_area) * 100;
-							else if (["2", "11"].includes(caseSpec.PCI_class)) density = (caseSpec.case_length / block_area) * 100;
-							else density = (caseSpec.case_area / block_area) * 100;
+              let density = 0;
+              if (caseSpec.PCI_class == '4')
+                density = (caseSpec.case_num / block_area) * 100;
+              else if (['2', '11'].includes(caseSpec.PCI_class))
+                density = (caseSpec.case_length / block_area) * 100;
+              else density = (caseSpec.case_area / block_area) * 100;
 
-							// console.log(caseSpec.block_id, caseSpec.PCI_class, caseSpec.case_level);
-							const dv = pciCal.calDV(caseSpec.PCI_class, caseSpec.case_level, density);
-							// console.log(density, dv);
+              // console.log(caseSpec.block_id, caseSpec.PCI_class, caseSpec.case_level);
+              const dv = pciCal.calDV(
+                caseSpec.PCI_class,
+                caseSpec.case_level,
+                density
+              );
+              // console.log(density, dv);
 
-							if (dv > 0) blockDVObj[caseSpec.block_id].push({ PCI_class: caseSpec.PCI_class, case_level: caseSpec.case_level, density, dv });
-						}
-						// console.log(blockDVObj);
+              if (dv > 0)
+                blockDVObj[caseSpec.block_id].push({
+                  PCI_class: caseSpec.PCI_class,
+                  case_level: caseSpec.case_level,
+                  density,
+                  dv,
+                });
+            }
+            // console.log(blockDVObj);
 
-						// Step2: 計算PCI
-						for (const [blockId, blockDV] of Object.entries(blockDVObj)) {
-							// let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
-							let { PCI } = pciCal.calPCI(blockDV.map(block => block.dv));
-							let pci = Math.round(PCI * 10) / 10;
-							// 去除 > 100 or < 0 不合理情形
-							pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
-							// console.log(blockId, pci);
+            // Step2: 計算PCI
+            for (const [blockId, blockDV] of Object.entries(blockDVObj)) {
+              // let pci = Math.round(pciCal.calPCI(blockDV.map(block => block.dv)) * 10) / 10;
+              let { PCI } = pciCal.calPCI(blockDV.map((block) => block.dv));
+              let pci = Math.round(PCI * 10) / 10;
+              // 去除 > 100 or < 0 不合理情形
+              pci = pci > 100 ? 100 : pci < 0 ? 0 : pci;
+              // console.log(blockId, pci);
 
-							await request.pg.client.query(
-								`UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
-								[ pci, blockId ]
-							);
-						}
-					}
-				}
+              await request.pg.client.query(
+                `UPDATE "qgis"."${pciTableName}" SET "PCI_real" = $1, "updatedAt" = NOW() WHERE "ogc_fid" = $2`,
+                [pci, blockId]
+              );
+            }
+          }
+        }
 
-				// return
-				return {
-					statusCode: 20000,
-					message: 'successful'
-				};
-			},
-		});
+        // return
+        return {
+          statusCode: 20000,
+          message: 'successful',
+        };
+      },
+    });
 
-		// -----------------------------------------------------------------------------------------------------
-		server.route({
-			method: "GET",
-			path: "/pciTool/correctGeom",
-			options: {
-				tags: ["api"],
-				description: "修正地理資訊",
-				// validate: {
-				// 	query: Joi.object({}),
-				// },
-			},
-			handler: async function (request) {
-				// const {  } = request.query;
+    // -----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'GET',
+      path: '/pciTool/correctGeom',
+      options: {
+        tags: ['api'],
+        description: '修正地理資訊',
+        // validate: {
+        // 	query: Joi.object({}),
+        // },
+      },
+      handler: async function (request) {
+        // const {  } = request.query;
 
-				// 修正「自相交」
-				await request.pg.client.query(
-					`UPDATE "qgis"."distress"
+        // 修正「自相交」
+        await request.pg.client.query(
+          `UPDATE "qgis"."distress"
 					SET "geom" = st_multi ( st_collectionextract ( st_makevalid ( "geom" ), 3 ) ) 
 					WHERE st_isvalid ( "geom" ) = FALSE;`
-				);
+        );
 
-				// 修正「包含數個polygon」
-				await request.pg.client.query(
-					`UPDATE "qgis"."distress"
+        // 修正「包含數個polygon」
+        await request.pg.client.query(
+          `UPDATE "qgis"."distress"
 					SET "geom" = "distress_Sub"."geom"
 					FROM (
 						SELECT
@@ -431,15 +507,255 @@ exports.plugin = {
 						ORDER BY "id" ASC, ST_AREA((ST_DUMP(geom)).geom::geometry(Polygon,4326)) DESC
 					) AS "distress_Sub"
 					WHERE "distress"."id" = "distress_Sub"."id";`
-				);
+        );
 
-				return {
-					statusCode: 20000,
-					message: 'successful'
-				};
-			}
-		});
+        return {
+          statusCode: 20000,
+          message: 'successful',
+        };
+      },
+    });
 
-		/* Router End */   
-	},
+    // ----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'POST',
+      path: '/pciTool/uploadKML',
+      options: {
+        description: '上傳KML',
+        //auth: { strategy: 'auth', scope: ['roles'] },
+        //auth: { strategy: 'bearer', scope: ['roles'] },
+        cors: { origin: ['*'], credentials: true },
+        tags: ['api'],
+        validate: {
+          payload: Joi.object({
+            tenderId: Joi.number().required().description('Tenders tenderId'),
+            surveyId: Joi.number().required().description('TendersSurvey id'),
+            dateStr: Joi.string().required().description('日期 (格式: YYYYMM)'),
+          }),
+        }, // POST
+      },
+      handler: async function (request, h) {
+        // param 參數
+        const { tenderId, surveyId, dateStr } = request.payload; //POST
+        const configName = 'PBC';
+        const pciTableName = await server.methods.tender.getPCITableV1(
+          tenderId,
+          0
+        );
+        const { body: response } = await superagent.get(
+          `https://storage.googleapis.com/map_config/${configName}/${configName}.json?t=${Date.now()}`
+        );
+        const districtList = response.districtList;
+        const suffixNum = response.layerList.PCI.options.kmlFileLastNum[dateStr]
+          ? Number(response.layerList.PCI.options.kmlFileLastNum[dateStr]) + 1
+          : 1;
+        const zoneList = Object.keys(districtList).filter(
+          (zone) => districtList[zone].dbName == pciTableName
+        );
+        if (zoneList.length == 0) {
+          console.error(
+            `No matching zone found for pciTableName: ${pciTableName}`
+          );
+          return Boom.notAcceptable(
+            `No matching zone found for table: ${pciTableName}. Please check configuration.`
+          );
+        }
+
+        const zone = zoneList[0];
+        console.log(zone, pciTableName);
+        console.log('------------------------------');
+
+        const { rows: res_block } = await request.pg.client.query(
+          `SELECT
+            "id",
+            "pci_id" AS "pciId",
+            "道路名稱" AS "roadName",
+            (CASE WHEN "道路面積" != '0' THEN ROUND("道路面積"::numeric, 2) ELSE ROUND(ST_Area("wkb_geometry"::geography)::numeric, 2) END) AS "area",
+            (CASE WHEN "PCI_real" < 0 THEN 0 ELSE "PCI_real" END) AS "PCI_real",
+            ST_AsKML("wkb_geometry") AS "wkb_geometry"
+          FROM "qgis"."${pciTableName}"
+          WHERE "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0 AND "PCI_real" != -1
+          ORDER BY "pci_id" ASC`
+        );
+
+        const { rows: res_case } = await request.pg.client.query(
+          `SELECT 
+            "blockList"."pci_id" AS "pciId",
+            "caseList"."id",
+            "caseList"."caseDetectionId",
+            "blockList"."道路名稱" AS "roadName",
+            ST_ASKML(COALESCE("caseList"."geom", "caseList"."wkb_geometry")) AS "wkb_geometry",
+            "caseList"."distressType" AS "BTName",
+            "caseList"."distressLevel" AS "brokeType",
+            (CASE WHEN "blockList"."PCI_real" = -1 THEN 100 WHEN "blockList"."PCI_real" < 0 THEN 0 ELSE "blockList"."PCI_real" END) AS "PCI_real"
+          FROM
+            "qgis"."${pciTableName}" AS "blockList"
+            INNER JOIN "qgis"."distress" AS "caseList" ON "caseList"."active" IS TRUE AND "caseList"."surveyId" = ${surveyId} AND (( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "blockList"."wkb_geometry" ) ) OR ( "caseList"."wkb_geometry" IS NULL AND ( ST_Intersects ( "caseList"."geom", "blockList"."wkb_geometry" ) ) ) )
+          WHERE
+            "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0
+            AND "caseList"."distressType" IS NOT NULL AND "caseList"."distressLevel" IS NOT NULL`
+        );
+
+        const [result] = await request.tendersql.pool.query(
+          `SELECT id, Place, ImgZoomOut, MillingLength, MillingWidth, MillingArea FROM caseDetection WHERE id IN (?)`,
+          [res_case.map((caseSpec) => caseSpec.caseDetectionId)]
+        );
+
+        for (const caseSpec of res_case) {
+          const caseFilter = result.filter(
+            (r) => r.id == caseSpec.caseDetectionId
+          );
+          if (caseFilter.length > 0) {
+            caseSpec.Place = caseFilter[0].Place;
+            caseSpec.ImgZoomOut = caseFilter[0].ImgZoomOut;
+            caseSpec.MillingLength = caseFilter[0].MillingLength;
+            caseSpec.MillingWidth = caseFilter[0].MillingWidth;
+            caseSpec.MillingArea = caseFilter[0].MillingArea;
+          }
+        }
+
+        const kmlArr = await server.methods.genKML(
+          res_block,
+          res_case,
+          configName,
+          dateStr,
+          zone,
+          suffixNum
+        );
+
+        // 輸出KML到桌面
+        const desktopPath = '/Users/jim/Desktop/KML';
+        if (!existsSync(desktopPath)) await fs.mkdir(desktopPath);
+        for (const key in kmlArr) {
+          for (const kmlSpec of kmlArr[key]) {
+            const filename = `${desktopPath}/${kmlSpec.name}`;
+            await fs.writeFile(filename, kmlSpec.content);
+          }
+        }
+
+        return {
+          statusCode: 20000,
+          message: 'successful',
+        };
+      },
+    });
+
+    // ----------------------------------------------------------------------------------------------------
+    server.route({
+      method: 'POST',
+      path: '/pciTool/uploadKML_830',
+      options: {
+        description: '上傳KML(8-30)',
+        //auth: { strategy: 'auth', scope: ['roles'] },
+        //auth: { strategy: 'bearer', scope: ['roles'] },
+        cors: { origin: ['*'], credentials: true },
+        tags: ['api'],
+        validate: {
+          payload: Joi.object({
+            dateStr: Joi.string().required().description('日期 (格式: YYYYMM)'),
+          }),
+        }, // POST
+      },
+      handler: async function (request, h) {
+        // param 參數
+        const { dateStr } = request.payload; //POST
+        const configName = 'taipei830';
+        const { body: response } = await server.methods.getHttp(
+          `https://storage.googleapis.com/map_config/${configName}/${configName}.json?t=${Date.now()}`
+        );
+        const districtList = response.districtList;
+        const suffixNum = response.layerList.PCI.options.kmlFileLastNum[dateStr]
+          ? Number(response.layerList.PCI.options.kmlFileLastNum[dateStr]) + 1
+          : 1;
+        if (Object.keys(districtList).length == 0)
+          return Boom.notAcceptable('No districts found');
+
+        for (const zone of Object.keys(districtList)) {
+          const pciTableName = districtList[zone].dbName;
+          if (!pciTableName) continue;
+
+          const surveyId = districtList[zone].surveyId;
+          if (!surveyId) continue;
+
+          console.log(zone, pciTableName);
+          console.log('------------------------------');
+
+          const { rows: res_block } = await request.pg.client.query(
+            `SELECT
+              "id",
+              "pci_id" AS "pciId",
+              "道路名稱" AS "roadName",
+              (CASE WHEN "道路面積" != '0' THEN ROUND("道路面積"::numeric, 2) ELSE ROUND(ST_Area("wkb_geometry"::geography)::numeric, 2) END) AS "area",
+              (CASE WHEN "PCI_real" < 0 THEN 0 ELSE "PCI_real" END) AS "PCI_real",
+              ST_AsKML("wkb_geometry") AS "wkb_geometry"
+            FROM "qgis"."${pciTableName}"
+            WHERE "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0 AND "PCI_real" != -1
+            ORDER BY "pci_id" ASC`
+          );
+
+          const { rows: res_case } = await request.pg.client.query(
+            `SELECT 
+              "blockList"."pci_id" AS "pciId",
+              "caseList"."id",
+              "caseList"."caseDetectionId",
+              "blockList"."道路名稱" AS "roadName",
+              ST_ASKML(COALESCE("caseList"."geom", "caseList"."wkb_geometry")) AS "wkb_geometry",
+              "caseList"."distressType" AS "BTName",
+              "caseList"."distressLevel" AS "brokeType",
+              (CASE WHEN "blockList"."PCI_real" = -1 THEN 100 WHEN "blockList"."PCI_real" < 0 THEN 0 ELSE "blockList"."PCI_real" END) AS "PCI_real"
+            FROM
+              "qgis"."${pciTableName}" AS "blockList"
+              INNER JOIN "qgis"."distress" AS "caseList" ON "caseList"."active" IS TRUE AND "caseList"."surveyId" = ${surveyId} AND (( "caseList"."geom" IS NULL AND ST_Intersects ( ST_Transform ( "caseList"."wkb_geometry", 4326 ), "blockList"."wkb_geometry" ) ) OR ( "caseList"."wkb_geometry" IS NULL AND ( ST_Intersects ( "caseList"."geom", "blockList"."wkb_geometry" ) ) ) )
+            WHERE
+              "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0
+              AND "caseList"."distressType" IS NOT NULL AND "caseList"."distressLevel" IS NOT NULL`
+          );
+
+          const [result] = await request.tendersql.pool.query(
+            `SELECT id, Place, ImgZoomOut, MillingLength, MillingWidth, MillingArea FROM caseDetection WHERE id IN (?)`,
+            [res_case.map((caseSpec) => caseSpec.caseDetectionId)]
+          );
+
+          for (const caseSpec of res_case) {
+            const caseFilter = result.filter(
+              (r) => r.id == caseSpec.caseDetectionId
+            );
+            if (caseFilter.length > 0) {
+              caseSpec.Place = caseFilter[0].Place;
+              caseSpec.ImgZoomOut = caseFilter[0].ImgZoomOut;
+              caseSpec.MillingLength = caseFilter[0].MillingLength;
+              caseSpec.MillingWidth = caseFilter[0].MillingWidth;
+              caseSpec.MillingArea = caseFilter[0].MillingArea;
+            }
+          }
+
+          const kmlArr = await server.methods.genKML(
+            res_block,
+            res_case,
+            configName,
+            dateStr,
+            zone,
+            suffixNum
+          );
+
+          // 輸出KML到桌面
+          const desktopPath = '/Users/jim/Desktop/KML';
+          if (!existsSync(desktopPath)) await fs.mkdir(desktopPath);
+          for (const key in kmlArr) {
+            for (const kmlSpec of kmlArr[key]) {
+              const filename = `${desktopPath}/${kmlSpec.name}`;
+              await fs.writeFile(filename, kmlSpec.content);
+            }
+          }
+        }
+
+        return {
+          statusCode: 20000,
+          message: 'successful',
+        };
+      },
+    });
+
+    /* Router End */
+  },
 };

@@ -1,0 +1,1109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"
+	xmlns:gx="http://www.google.com/kml/ext/2.2"
+	xmlns:kml="http://www.opengis.net/kml/2.2"
+	xmlns:atom="http://www.w3.org/2005/Atom">
+	<Document id="root_doc">
+		<Style id="default">
+			<LineStyle>
+				<color>ff0000ff</color>
+			</LineStyle>
+			<PolyStyle>
+				<color>ff0000ff</color>
+			</PolyStyle>
+		</Style>
+		<Style id="sh_red-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/red-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/red-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_ylw-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ylw-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ylw-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_blu-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/blu-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/blu-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_grn-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/grn-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/grn-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_ltblu-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ltblu-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ltblu-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_orange-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/orange-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/orange-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_wht-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_pink-blank">
+			<IconStyle>
+				<scale>1.5</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/pink-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/pink-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_S-blank">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/S.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/S.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_M-blank">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/M.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/M.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_L-blank">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/L.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/L.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_H-blank">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/H.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/H.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_AC-blank">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/AC.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/AC.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_360">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_360B">
+			<IconStyle>
+				<scale>0.5</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360B.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360B.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_360G">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360G.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360G.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sh_360R">
+			<IconStyle>
+				<scale>1.7</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360R.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360R.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<StyleMap id="msn_red-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_red-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_red-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_ylw-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_ylw-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_ylw-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_blu-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_blu-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_blu-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_grn-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_grn-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_grn-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_orange-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_orange-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_orange-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_ltblu-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_ltblu-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_ltblu-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_wht-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_wht-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_wht-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_pink-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_pink-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_pink-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_S-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_S-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_S-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_M-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_M-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_M-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_L-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_L-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_L-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_H-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_H-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_H-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_AC-blank">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_AC-blank</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_AC-blank</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_360">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_360</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_360</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_360B">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_360B</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_360B</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_360G">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_360G</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_360G</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="msn_360R">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#sn_360R</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#sh_360R</styleUrl>
+			</Pair>
+		</StyleMap>
+		<StyleMap id="m_ylw-pushpin">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#s_ylw-pushpin</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#s_ylw-pushpin_hl</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="s_ylw-pushpin">
+			<LineStyle>
+				<color>7fff0000</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<Style id="s_ylw-pushpin_hl">
+			<LineStyle>
+				<color>7fff0000</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<Style id="s_ylw-pushpin1">
+			<LineStyle>
+				<color>7f0000ff</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<Style id="s_ylw-pushpin_hl1">
+			<LineStyle>
+				<color>7f0000ff</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<Style id="s_ylw-pushpina">
+			<LineStyle>
+				<color>660000ff</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<Style id="s_ylw-pushpinb">
+			<LineStyle>
+				<color>660000ff</color>
+				<width>1</width>
+			</LineStyle>
+		</Style>
+		<StyleMap id="s_ylw-pushpin12">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#s_ylw-pushpina</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#s_ylw-pushpinb</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="sn_red-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/red-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/red-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_ylw-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ylw-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ylw-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_blu-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/blu-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/blu-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_grn-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/grn-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/grn-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_ltblu-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ltblu-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/ltblu-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_orange-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/orange-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/orange-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_wht-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_pink-blank">
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/pink-blank.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>https://maps.google.com/mapfiles/kml/paddle/pink-blank.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_S-blank">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/S.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/S.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_M-blank">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/M.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/M.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_L-blank">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/L.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/L.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_H-blank">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/H.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/H.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_AC-blank">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/AC.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/AC.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_360">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_360B">
+			<IconStyle>
+				<scale>1.0</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360B.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360B.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_360G">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360G.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360G.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="sn_360R">
+			<IconStyle>
+				<scale>1.6</scale>
+				<Icon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360R.png</href>
+				</Icon>
+				<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+			</IconStyle>
+			<ListStyle>
+				<ItemIcon>
+					<href>http://taipeinw.bim-group.com/images/google_icon/360R.png</href>
+				</ItemIcon>
+			</ListStyle>
+		</Style>
+		<Style id="s_ylw-pushpin_hla">
+			<LineStyle>
+				<color>820000ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>820000ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="s_ylw-pushpin_hl1a">
+			<LineStyle>
+				<color>820000ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>820000ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="m_ylw-pushpin1">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#s_ylw-pushpin_hla</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#s_ylw-pushpin_hl1a</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed123">
+			<LineStyle>
+				<color>cc2621a7</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>cc2621a7</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed49">
+			<LineStyle>
+				<color>cc2621a7</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>cc2621a7</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed12593">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed123</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed129</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed7">
+			<LineStyle>
+				<color>8200ffff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>8200ffff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed4">
+			<LineStyle>
+				<color>8200ffff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>8200ffff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed5">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed7</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed4</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed">
+			<LineStyle>
+				<color>8200ff80</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>8200ff80</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed6">
+			<LineStyle>
+				<color>8200ff80</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>8200ff80</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed3">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed6</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed0">
+			<LineStyle>
+				<color>82ffff00</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82ffff00</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed2">
+			<LineStyle>
+				<color>82ffff00</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82ffff00</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed0</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed2</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed8">
+			<LineStyle>
+				<color>82c08080</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82c08080</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed48">
+			<LineStyle>
+				<color>82c08080</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82c08080</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed81">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed8</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed48</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed9">
+			<LineStyle>
+				<color>82ff00ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82ff00ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed49">
+			<LineStyle>
+				<color>82ff00ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82ff00ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed59">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed9</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed49</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed10">
+			<LineStyle>
+				<color>82404080</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82404080</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed109">
+			<LineStyle>
+				<color>82404080</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82404080</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1059">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed10</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed109</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed11">
+			<LineStyle>
+				<color>820080ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>820080ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed119">
+			<LineStyle>
+				<color>820080ff</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>820080ff</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1159">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed11</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed119</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed12">
+			<LineStyle>
+				<color>cc00b900</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>cc00b900</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed49">
+			<LineStyle>
+				<color>cc00b900</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>cc00b900</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1259">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed12</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed129</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed13">
+			<LineStyle>
+				<color>4cff0000</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>4cff0000</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed139">
+			<LineStyle>
+				<color>4cff0000</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>4cff0000</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1359">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed13</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed139</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed14">
+			<LineStyle>
+				<color>82000040</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82000040</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed149">
+			<LineStyle>
+				<color>82000040</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82000040</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1459">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed14</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed149</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Style id="failed15">
+			<LineStyle>
+				<color>82000000</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82000000</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<Style id="failed159">
+			<LineStyle>
+				<color>82000000</color>
+				<width>1</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>82000000</color>
+				<width>1</width>
+			</PolyStyle>
+		</Style>
+		<StyleMap id="failed1559">
+			<Pair>
+				<key>normal</key>
+				<styleUrl>#failed15</styleUrl>
+			</Pair>
+			<Pair>
+				<key>highlight</key>
+				<styleUrl>#failed159</styleUrl>
+			</Pair>
+		</StyleMap>
+		<Folder></Folder>
+	</Document>
+</kml>

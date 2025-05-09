@@ -1,0 +1,9 @@
+### 測試 PCI Tool KML 上傳 API
+POST http://localhost:3000/pciTool/uploadKML
+Content-Type: application/json
+
+{
+  "tenderId": 100,
+  "surveyId": 1,
+  "dateStr": "202505"
+}
