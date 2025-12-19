@@ -1,4 +1,4 @@
-# Use the official lightweight Node.js 12 image.
+# Use the official lightweight Node.js 16 image.
 # https://hub.docker.com/_/node
 FROM node:16-slim
 
@@ -12,11 +12,17 @@ COPY package*.json ./
 
 # Install production dependencies.
 RUN yarn install --production --ignore-engines && yarn cache clean
-#RUN npm install --only=production
 
 # Copy local code to the container image.
 COPY . ./
 
+# Expose the port the app runs on
+EXPOSE 3000
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
 # Run the web service on container startup.
 CMD [ "yarn", "start" ]
-#CMD [ "npm", "start" ]

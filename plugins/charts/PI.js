@@ -148,7 +148,7 @@ exports.plugin = {
 					${sqlCMD_Filter_MS}
 					AND blockList.TBName = '${district}'
 					AND caseList.RoadType IN ( '1', '2' )
-					AND CAST ( caseList.CaseDate AS datetime ) >= '${dateStart}' AND CAST ( caseList.CaseDate AS datetime ) < '${dateEnd}'
+					AND CAST ( caseList.CaseDate AS datetime ) >= dateadd(hour,8,'${dateStart}') AND CAST ( caseList.CaseDate AS datetime ) < dateadd(hour,8,'${dateEnd}')
 				ORDER BY caseList.CaseNo, caseList.SystemNo`;
 				console.log(sqlCMD);
 				const { recordsets: [ result_rm ] } = await sql.query(sqlCMD);
