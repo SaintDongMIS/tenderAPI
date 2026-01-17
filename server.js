@@ -3,6 +3,17 @@
 //process.env.NODE_ENV = 'production';
 
 const Hapi = require("@hapi/hapi");
+
+const dotenv = require("dotenv");
+const args = process.argv.slice(2);
+const configPathArg = args.find(arg => arg.startsWith("dotenv_config_path="));
+if (configPathArg) {
+	const configPath = configPathArg.split("=")[1];
+	dotenv.config({ path: configPath });
+} else {
+	dotenv.config();
+}
+
 //const CatboxRedis = require('@hapi/catbox-redis');
 const Blipp = require("blipp");
 const Boom = require("@hapi/boom");

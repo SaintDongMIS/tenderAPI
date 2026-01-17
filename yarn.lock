@@ -268,7 +268,7 @@
   dependencies:
     "@hapi/hoek" "10.x.x"
 
-"@hapi/boom@^9.0.0", "@hapi/boom@^9.1.0", "@hapi/boom@^9.1.4", "@hapi/boom@>=7.x.x", "@hapi/boom@9.1.4", "@hapi/boom@9.x.x":
+"@hapi/boom@^9.0.0", "@hapi/boom@^9.1.0", "@hapi/boom@^9.1.4", "@hapi/boom@9.1.4", "@hapi/boom@9.x.x":
   "integrity" "sha512-Ls1oH8jaN1vNsqcaHVYJrKmgMcKsC1wcp8bujvXrHaAqD2iDYq3HoOwsxwo09Cuda5R5nC0o0IxlrlTuvPuzSw=="
   "resolved" "https://registry.npmjs.org/@hapi/boom/-/boom-9.1.4.tgz"
   "version" "9.1.4"
@@ -353,7 +353,7 @@
     "@hapi/validate" "^2.0.0"
     "@hapi/wreck" "^18.0.0"
 
-"@hapi/hapi@^20.2.2", "@hapi/hapi@>=19.x.x", "@hapi/hapi@20.2.1":
+"@hapi/hapi@20.2.1":
   "integrity" "sha512-OXAU+yWLwkMfPFic+KITo+XPp6Oxpgc9WUH+pxXWcTIuvWbgco5TC/jS8UDvz+NFF5IzRgF2CL6UV/KLdQYUSQ=="
   "resolved" "https://registry.npmjs.org/@hapi/hapi/-/hapi-20.2.1.tgz"
   "version" "20.2.1"
@@ -1934,7 +1934,7 @@
   "resolved" "https://registry.npmjs.org/isstream/-/isstream-0.1.2.tgz"
   "version" "0.1.2"
 
-"joi@^17.3.0", "joi@^17.6.0", "joi@>=17.x.x", "joi@17.x", "joi@17.x.x":
+"joi@^17.3.0", "joi@^17.6.0", "joi@17.x.x":
   "integrity" "sha512-OX5dG6DTbcr/kbMFj0KGYxuew69HPcAE3K/sZpEV2nP6e/j/C0HV+HNiBPCASxdx5T7DMoa0s8UeHWMnb6n2zw=="
   "resolved" "https://registry.npmjs.org/joi/-/joi-17.6.0.tgz"
   "version" "17.6.0"
@@ -2469,7 +2469,7 @@
     "postgres-date" "~1.0.4"
     "postgres-interval" "^1.1.0"
 
-"pg@^8.0.2", "pg@>=8.0":
+"pg@^8.0.2":
   "integrity" "sha512-HPmH4GH4H3AOprDJOazoIcpI49XFsHCe8xlrjHkWiapdbHK+HLtbm/GQzXYAZwmPju/kzKhjaSfMACG+8cgJcw=="
   "resolved" "https://registry.npmjs.org/pg/-/pg-8.7.3.tgz"
   "version" "8.7.3"
@@ -2714,7 +2714,7 @@
     "stealthy-require" "^1.1.1"
     "tough-cookie" "^2.3.3"
 
-"request@^2.34", "request@^2.83.0":
+"request@^2.83.0":
   "integrity" "sha512-MsvtOrfG9ZcrOwAW+Qi+F6HbD0CWXEh9ou77uOb7FM2WPhwT7smM833PzanhJLsgXjN89Ir6V2PczXNnMpwKhw=="
   "resolved" "https://registry.npmjs.org/request/-/request-2.88.2.tgz"
   "version" "2.88.2"
