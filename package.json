@@ -1,6 +1,6 @@
 {
   "name": "tenderapi",
-  "version": "1.3.36",
+  "version": "1.3.37",
   "description": "This Project is using for tender admin ",
   "main": "server.js",
   "repository": "https://github.com/psamleeq/tenderAPI.git",
@@ -46,7 +46,7 @@
     "start": "node -r dotenv/config server.js dotenv_config_path=env/.env",
     "stg": "node -r dotenv/config server.js dotenv_config_path=env/stg.env",
     "prd": "node server.js dotenv_config_path=env/prd.env",
-    "build:stg": "gcloud config set project gis-stg && gcloud builds submit --tag asia.gcr.io/gis-stg/tenderapi:v1.3.36",
-    "build:prd": "gcloud config set project gis-prd && gcloud builds submit --tag asia.gcr.io/gis-prd/tenderapi:v1.3.36"
+    "build:stg": "gcloud config set project gis-stg && gcloud builds submit --tag asia.gcr.io/gis-stg/tenderapi:v1.3.37",
+    "build:prd": "gcloud config set project gis-prd && gcloud builds submit --tag asia.gcr.io/gis-prd/tenderapi:v1.3.37"
   }
 }
