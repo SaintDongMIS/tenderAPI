@@ -150,9 +150,15 @@ const init = async () => {
 	await server.register(require("./views/viewStatus"));
 
 	// ----- routers --------------------------------------------
-	// Login
+	// Login (MySQL版本)
 	await server.register(require("./plugins/auth/login"));
 	await server.register(require("./plugins/users/accounts"));
+	
+	// PostgreSQL Accounts API (連接到已同步的PostgreSQL資料庫)
+	await server.register(require("./plugins/users/accounts_pg"));
+	
+	// PostgreSQL Login API (連接到已同步的PostgreSQL資料庫) - 暫時停用
+	// await server.register(require("./plugins/auth/login_pg"));
 
 	// Demo
 	// await server.register(require('./plugins/sample'));

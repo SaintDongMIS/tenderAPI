@@ -6,17 +6,45 @@ const Joi = require('joi');
 
 /**
  * 資料庫同步服務
- * 將MySQL資料庫中的account和tenderdb資料同步到PostgreSQL資料庫
+ * 將MySQL資料庫中的account和tenderdb資料同步到PostgreSQL資料庫的對應schema中
  */
 exports.plugin = {
     name: 'db_sync',
-    version: '1.0.0',
+    version: '2.0.0',
     register: async function (server, options) {
         
-        // 同步函數 - 同步單個資料表
-        async function syncTable(mysqlPool, pgClient, tableName, primaryKey = 'id', batchSize = 1000) {
+        // 創建schema函數
+        async function createSchemaIfNotExists(pgClient, schemaName) {
             try {
-                console.log(`開始同步資料表: ${tableName}`);
+                console.log(`檢查PostgreSQL schema: ${schemaName}`);
+                
+                // 檢查schema是否存在
+                const schemaExists = await pgClient.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.schemata 
+                        WHERE schema_name = $1
+                    )
+                `, [schemaName]);
+                
+                if (!schemaExists.rows[0].exists) {
+                    console.log(`創建schema: ${schemaName}`);
+                    await pgClient.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+                    console.log(`Schema ${schemaName} 創建成功`);
+                } else {
+                    console.log(`Schema ${schemaName} 已存在`);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error(`創建schema ${schemaName} 時發生錯誤:`, error);
+                return false;
+            }
+        }
+        
+        // 同步函數 - 同步單個資料表到指定schema
+        async function syncTable(mysqlPool, pgClient, schemaName, tableName, primaryKey = 'id', batchSize = 1000) {
+            try {
+                console.log(`開始同步資料表: ${schemaName}.${tableName}`);
                 
                 // 1. 從MySQL取得資料 - 先檢查是否有id欄位
                 let orderByClause = '';
@@ -43,13 +71,13 @@ exports.plugin = {
                 const tableExists = await pgClient.query(`
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables 
-                        WHERE table_schema = 'public' 
-                        AND table_name = $1
+                        WHERE table_schema = $1 
+                        AND table_name = $2
                     )
-                `, [tableName]);
+                `, [schemaName, tableName]);
                 
                 if (!tableExists.rows[0].exists) {
-                    console.log(`PostgreSQL 中不存在資料表 ${tableName}，需要建立`);
+                    console.log(`PostgreSQL 中不存在資料表 ${schemaName}.${tableName}，需要建立`);
                     
                     // 從第一筆資料推測欄位結構
                     const sampleRow = mysqlRows[0];
@@ -78,9 +106,9 @@ exports.plugin = {
                         return `"${col}" ${type}`;
                     }).join(', ');
                     
-                    const createTableSQL = `CREATE TABLE IF NOT EXISTS "public"."${tableName}" (${columnDefs})`;
+                    const createTableSQL = `CREATE TABLE IF NOT EXISTS "${schemaName}"."${tableName}" (${columnDefs})`;
                     await pgClient.query(createTableSQL);
-                    console.log(`已建立資料表: ${tableName}`);
+                    console.log(`已建立資料表: ${schemaName}.${tableName}`);
                 }
                 
                 // 3. 批次同步資料 - 使用簡單的INSERT，如果重複則跳過
@@ -114,7 +142,7 @@ exports.plugin = {
                     
                     // 使用簡單的INSERT，如果重複則跳過
                     const insertSQL = `
-                        INSERT INTO "public"."${tableName}" (${columnNames})
+                        INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
                         VALUES ${placeholders}
                         ON CONFLICT DO NOTHING
                     `;
@@ -122,7 +150,7 @@ exports.plugin = {
                     try {
                         await pgClient.query(insertSQL, values);
                         syncedCount += batch.length;
-                        console.log(`已同步 ${tableName}: ${syncedCount}/${mysqlRows.length} 筆資料`);
+                        console.log(`已同步 ${schemaName}.${tableName}: ${syncedCount}/${mysqlRows.length} 筆資料`);
                     } catch (insertError) {
                         // 如果批次插入失敗，嘗試逐筆插入
                         console.log(`批次插入失敗，嘗試逐筆插入...`);
@@ -139,7 +167,7 @@ exports.plugin = {
                                 });
                                 
                                 const singleInsertSQL = `
-                                    INSERT INTO "public"."${tableName}" (${columnNames})
+                                    INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
                                     VALUES (${columns.map((_, idx) => `$${idx + 1}`).join(', ')})
                                     ON CONFLICT DO NOTHING
                                 `;
@@ -154,7 +182,7 @@ exports.plugin = {
                     }
                 }
                 
-                console.log(`完成同步資料表: ${tableName}, 成功: ${syncedCount}, 失敗: ${errorCount}`);
+                console.log(`完成同步資料表: ${schemaName}.${tableName}, 成功: ${syncedCount}, 失敗: ${errorCount}`);
                 return { 
                     success: errorCount === 0, 
                     synced: syncedCount,
@@ -163,17 +191,23 @@ exports.plugin = {
                 };
                 
             } catch (error) {
-                console.error(`同步資料表 ${tableName} 時發生錯誤:`, error);
+                console.error(`同步資料表 ${schemaName}.${tableName} 時發生錯誤:`, error);
                 return { success: false, error: error.message };
             }
         }
         
-        // 同步函數 - 同步整個資料庫
-        async function syncDatabase(mysqlPool, pgClient, databaseName) {
+        // 同步函數 - 同步整個資料庫到指定schema
+        async function syncDatabase(mysqlPool, pgClient, databaseName, schemaName) {
             try {
-                console.log(`開始同步資料庫: ${databaseName}`);
+                console.log(`開始同步資料庫 ${databaseName} 到 schema ${schemaName}...`);
                 
-                // 1. 取得MySQL中的所有資料表
+                // 1. 創建schema（如果不存在）
+                const schemaCreated = await createSchemaIfNotExists(pgClient, schemaName);
+                if (!schemaCreated) {
+                    return { success: false, error: `無法創建schema: ${schemaName}` };
+                }
+                
+                // 2. 取得MySQL中的所有資料表
                 const [tables] = await mysqlPool.execute(`
                     SELECT TABLE_NAME as table_name 
                     FROM INFORMATION_SCHEMA.TABLES 
@@ -205,7 +239,7 @@ exports.plugin = {
                     const primaryKey = primaryKeys.length > 0 ? primaryKeys[0].column_name : 'id';
                     
                     // 同步資料表
-                    const result = await syncTable(mysqlPool, pgClient, tableName, primaryKey);
+                    const result = await syncTable(mysqlPool, pgClient, schemaName, tableName, primaryKey);
                     results.push({
                         table: tableName,
                         ...result
@@ -215,10 +249,11 @@ exports.plugin = {
                 const successful = results.filter(r => r.success).length;
                 const failed = results.filter(r => !r.success).length;
                 
-                console.log(`完成同步資料庫: ${databaseName}, 成功: ${successful}, 失敗: ${failed}`);
+                console.log(`完成同步資料庫 ${databaseName} 到 schema ${schemaName}, 成功: ${successful}, 失敗: ${failed}`);
                 
                 return {
                     database: databaseName,
+                    schema: schemaName,
                     totalTables: tables.length,
                     successful,
                     failed,
@@ -226,33 +261,35 @@ exports.plugin = {
                 };
                 
             } catch (error) {
-                console.error(`同步資料庫 ${databaseName} 時發生錯誤:`, error);
+                console.error(`同步資料庫 ${databaseName} 到 schema ${schemaName} 時發生錯誤:`, error);
                 return { success: false, error: error.message };
             }
         }
         
         // 主要同步函數 - 需要request物件來訪問MySQL和PostgreSQL連接
         async function syncAllDatabases(request) {
-            console.log('開始同步所有資料庫...');
+            console.log('開始同步所有資料庫到PostgreSQL schema...');
             const startTime = Date.now();
             
             try {
                 const results = [];
                 
-                // 同步 account 資料庫
-                console.log('同步 account 資料庫...');
+                // 同步 account 資料庫到 account schema
+                console.log('同步 account 資料庫到 account schema...');
                 const accountResult = await syncDatabase(
                     request.accsql.pool,
                     request.pg.client,
+                    'account',
                     'account'
                 );
                 results.push(accountResult);
                 
-                // 同步 tenderdb 資料庫
-                console.log('同步 tenderdb 資料庫...');
+                // 同步 tenderdb 資料庫到 tenderdb schema
+                console.log('同步 tenderdb 資料庫到 tenderdb schema...');
                 const tenderResult = await syncDatabase(
                     request.tendersql.pool,
                     request.pg.client,
+                    'tenderdb',
                     'tenderdb'
                 );
                 results.push(tenderResult);
@@ -332,7 +369,7 @@ exports.plugin = {
                 description: '手動觸發資料庫同步',
                 tags: ['api', 'database', 'sync'],
                 auth: false, // 根據需求設定權限
-                notes: '同步MySQL的account和tenderdb資料庫到PostgreSQL',
+                notes: '同步MySQL的account和tenderdb資料庫到PostgreSQL對應的schema',
                 plugins: {
                     'hapi-swagger': {
                         responses: {
@@ -412,12 +449,16 @@ exports.plugin = {
                     message: '資料庫同步服務運行中',
                     data: {
                         service: 'db_sync',
-                        version: '1.0.0',
+                        version: '2.0.0',
                         scheduled_job: syncJob,
                         endpoints: [
                             { method: 'POST', path: '/api/db/sync', description: '手動觸發同步' },
                             { method: 'GET', path: '/api/db/sync/status', description: '查詢同步狀態' },
                             { method: 'POST', path: '/api/db/sync/table', description: '同步單一資料表' }
+                        ],
+                        schemas: [
+                            { mysql_database: 'account', postgresql_schema: 'account' },
+                            { mysql_database: 'tenderdb', postgresql_schema: 'tenderdb' }
                         ]
                     }
                 };
@@ -476,10 +517,14 @@ exports.plugin = {
                 
                 try {
                     let mysqlPool;
+                    let schemaName;
+                    
                     if (database === 'account') {
                         mysqlPool = request.accsql.pool;
+                        schemaName = 'account';
                     } else if (database === 'tenderdb') {
                         mysqlPool = request.tendersql.pool;
+                        schemaName = 'tenderdb';
                     } else {
                         return h.response({
                             statusCode: 400,
@@ -488,9 +533,13 @@ exports.plugin = {
                         }).code(400);
                     }
                     
+                    // 創建schema（如果不存在）
+                    await createSchemaIfNotExists(request.pg.client, schemaName);
+                    
                     const result = await syncTable(
                         mysqlPool,
                         request.pg.client,
+                        schemaName,
                         table,
                         primaryKey,
                         batchSize
@@ -499,13 +548,13 @@ exports.plugin = {
                     if (result.success) {
                         return {
                             statusCode: 200,
-                            message: `資料表 ${table} 同步成功`,
+                            message: `資料表 ${schemaName}.${table} 同步成功`,
                             data: result
                         };
                     } else {
                         return h.response({
                             statusCode: 500,
-                            message: `資料表 ${table} 同步失敗`,
+                            message: `資料表 ${schemaName}.${table} 同步失敗`,
                             error: result.error
                         }).code(500);
                     }
