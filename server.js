@@ -142,6 +142,9 @@ const init = async () => {
 	/** Cron Jobs */
 	//await server.register(require('./plugins/services/cron_jobs'))
 
+	/** Database Sync Service */
+	await server.register(require('./plugins/services/db_sync'));
+
 	// ----- views --------------------------------------------
 	//await server.register(require('./views/viewPrivacy'))
 	await server.register(require("./views/viewStatus"));

@@ -47,7 +47,8 @@ exports.plugin = {
       tags: [
         { name: 'view',   description: 'web view'},
         { name: 'auth',   description: 'auth function' },
-        
+        { name: 'database', description: 'database operations' },
+        { name: 'sync',   description: 'database synchronization' },
       ],
 
       //expanded: 'full', 
