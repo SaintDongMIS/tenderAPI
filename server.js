@@ -111,10 +111,13 @@ server.route({
 
 const init = async () => {
 	// ----- Features --------------------------------------------
-	/** mySQL2 */
-	await server.register(require('./plugins/services/mysqqqql'));
+	/** mySQL2 - 已停用，遷移到 PostgreSQL */
+	// await server.register(require('./plugins/services/mysqqqql'));
 
-	/** postSQL */
+	/** MySQL 到 PostgreSQL 轉接層 (處理 account 和 tenderdb schema) */
+	await server.register(require("./plugins/services/mysql_to_pg_adapter"));
+
+	/** 原有的 PostgreSQL 連線 (保持相容性) */
 	await server.register(require("./plugins/services/postsql"));
 
 	/** swagger */
