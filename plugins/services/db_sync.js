@@ -83,7 +83,7 @@ exports.plugin = {
                     const sampleRow = mysqlRows[0];
                     const columns = Object.keys(sampleRow);
                     
-                    // 建立資料表SQL - 使用更寬鬆的資料類型
+                    // 建立資料表SQL - 使用更寬鬆的資料類型，並加入主鍵約束
                     const columnDefs = columns.map(col => {
                         const value = sampleRow[col];
                         let type = 'TEXT';
@@ -106,12 +106,18 @@ exports.plugin = {
                         return `"${col}" ${type}`;
                     }).join(', ');
                     
-                    const createTableSQL = `CREATE TABLE IF NOT EXISTS "${schemaName}"."${tableName}" (${columnDefs})`;
+                    // 檢查主鍵欄位是否存在於資料表中
+                    let primaryKeyConstraint = '';
+                    if (columns.includes(primaryKey)) {
+                        primaryKeyConstraint = `, PRIMARY KEY ("${primaryKey}")`;
+                    }
+                    
+                    const createTableSQL = `CREATE TABLE IF NOT EXISTS "${schemaName}"."${tableName}" (${columnDefs}${primaryKeyConstraint})`;
                     await pgClient.query(createTableSQL);
                     console.log(`已建立資料表: ${schemaName}.${tableName}`);
                 }
                 
-                // 3. 批次同步資料 - 使用簡單的INSERT，如果重複則跳過
+                // 3. 批次同步資料 - 使用UPSERT（存在則更新，不存在則新增）
                 let syncedCount = 0;
                 let errorCount = 0;
                 
@@ -140,12 +146,28 @@ exports.plugin = {
                         })
                     );
                     
-                    // 使用簡單的INSERT，如果重複則跳過
-                    const insertSQL = `
-                        INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
-                        VALUES ${placeholders}
-                        ON CONFLICT DO NOTHING
-                    `;
+                    // 建立INSERT SQL，如果重複則更新
+                    let insertSQL = '';
+                    if (columns.includes(primaryKey)) {
+                        // 如果有主鍵，使用ON CONFLICT ... DO UPDATE SET
+                        const updateSet = columns
+                            .filter(col => col !== primaryKey)
+                            .map(col => `"${col}" = EXCLUDED."${col}"`)
+                            .join(', ');
+                        
+                        insertSQL = `
+                            INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
+                            VALUES ${placeholders}
+                            ON CONFLICT ("${primaryKey}") DO UPDATE SET ${updateSet}
+                        `;
+                    } else {
+                        // 如果沒有主鍵，使用ON CONFLICT DO NOTHING
+                        insertSQL = `
+                            INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
+                            VALUES ${placeholders}
+                            ON CONFLICT DO NOTHING
+                        `;
+                    }
                     
                     try {
                         await pgClient.query(insertSQL, values);
@@ -166,11 +188,28 @@ exports.plugin = {
                                     return value;
                                 });
                                 
-                                const singleInsertSQL = `
-                                    INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
-                                    VALUES (${columns.map((_, idx) => `$${idx + 1}`).join(', ')})
-                                    ON CONFLICT DO NOTHING
-                                `;
+                                // 建立單筆INSERT SQL，如果重複則更新
+                                let singleInsertSQL = '';
+                                if (columns.includes(primaryKey)) {
+                                    // 如果有主鍵，使用ON CONFLICT ... DO UPDATE SET
+                                    const updateSet = columns
+                                        .filter(col => col !== primaryKey)
+                                        .map(col => `"${col}" = EXCLUDED."${col}"`)
+                                        .join(', ');
+                                    
+                                    singleInsertSQL = `
+                                        INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
+                                        VALUES (${columns.map((_, idx) => `$${idx + 1}`).join(', ')})
+                                        ON CONFLICT ("${primaryKey}") DO UPDATE SET ${updateSet}
+                                    `;
+                                } else {
+                                    // 如果沒有主鍵，使用ON CONFLICT DO NOTHING
+                                    singleInsertSQL = `
+                                        INSERT INTO "${schemaName}"."${tableName}" (${columnNames})
+                                        VALUES (${columns.map((_, idx) => `$${idx + 1}`).join(', ')})
+                                        ON CONFLICT DO NOTHING
+                                    `;
+                                }
                                 
                                 await pgClient.query(singleInsertSQL, singleValues);
                                 syncedCount++;
@@ -457,8 +496,8 @@ exports.plugin = {
                             { method: 'POST', path: '/api/db/sync/table', description: '同步單一資料表' }
                         ],
                         schemas: [
-                            { mysql_database: 'account', postgresql_schema: 'account' },
-                            { mysql_database: 'tenderdb', postgresql_schema: 'tenderdb' }
+                            { mysql_database: 'account', postgresql_schema: 'account (可自定義)' },
+                            { mysql_database: 'tenderdb', postgresql_schema: 'tenderdb (可自定義)' }
                         ]
                     }
                 };
@@ -475,7 +514,8 @@ exports.plugin = {
                 auth: false,
                 validate: {
                     payload: Joi.object({
-                        database: Joi.string().valid('account', 'tenderdb').required().description('資料庫名稱: account 或 tenderdb'),
+                        database: Joi.string().valid('account', 'tenderdb').required().description('MySQL資料庫名稱: account 或 tenderdb'),
+                        schema: Joi.string().default('').description('PostgreSQL schema名稱（可選，預設使用與資料庫相同的名稱）'),
                         table: Joi.string().required().description('資料表名稱'),
                         primaryKey: Joi.string().default('id').description('主鍵欄位名稱'),
                         batchSize: Joi.number().integer().min(1).max(10000).default(1000).description('批次大小')
@@ -513,7 +553,7 @@ exports.plugin = {
                 }
             },
             handler: async function (request, h) {
-                const { database, table, primaryKey, batchSize } = request.payload;
+                const { database, schema, table, primaryKey, batchSize } = request.payload;
                 
                 try {
                     let mysqlPool;
@@ -521,10 +561,10 @@ exports.plugin = {
                     
                     if (database === 'account') {
                         mysqlPool = request.accsql.pool;
-                        schemaName = 'account';
+                        schemaName = schema || 'account';
                     } else if (database === 'tenderdb') {
                         mysqlPool = request.tendersql.pool;
-                        schemaName = 'tenderdb';
+                        schemaName = schema || 'tenderdb';
                     } else {
                         return h.response({
                             statusCode: 400,
