@@ -61,7 +61,7 @@ exports.plugin = {
 				// const { months: monthDiff } = monthStart.diff(monthEnd, ["months"]).toObject();
 				// const monthCount = Math.ceil(Math.abs(monthDiff));
 				// const offset = (pageCurrent == 1) ? 0 : (pageCurrent - 1) * (pageSize * monthCount);
-				if (![103, 104].includes(zipCode)) {
+				if (![103, 104, 105, 110].includes(zipCode)) {
 					return {
 						statusCode: 20000,
 						message: 'successful',
@@ -75,18 +75,27 @@ exports.plugin = {
 						DATE_PART('month', "PCIList"."datestar"::date) AS month
 					FROM
 						"qgis"."pci_${zipCode}" AS "PCIList"
-						LEFT JOIN "qgis"."block_${zipCode}" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
+						LEFT JOIN "qgis"."block_${zipCode}1" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
 					WHERE
 						"PCIList"."datestar"::date >= $1 AND "PCIList"."datestar"::date < $2
 						AND "blockList"."pci_id" IS NOT NULL
 					GROUP BY DATE_PART('month', "PCIList"."datestar"::date), DATE_PART('year', "PCIList"."datestar"::date)`,
 					[ timeStart, timeEnd ]);
 				
-				// console.log(monthList);
+				console.log(`SELECT
+						DATE_PART('year', "PCIList"."datestar"::date) AS year,
+						DATE_PART('month', "PCIList"."datestar"::date) AS month
+					FROM
+						"qgis"."pci_${zipCode}" AS "PCIList"
+						LEFT JOIN "qgis"."block_${zipCode}1" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
+					WHERE
+						"PCIList"."datestar"::date >= $1 AND "PCIList"."datestar"::date < $2
+						AND "blockList"."pci_id" IS NOT NULL
+					GROUP BY DATE_PART('month', "PCIList"."datestar"::date), DATE_PART('year', "PCIList"."datestar"::date)`);
 				
 				const monthCount = monthList.length;
 				const offset = (pageCurrent == 1) ? 0 : (pageCurrent - 1) * (pageSize * monthCount);
-				const distMap = { 103: "大同區", 104: "中山區" };
+				const distMap = { 103: "大同區", 104: "中山區", 105: "松山區", 110: "信義區" };
 
 				const { rows: result } = await request.pg.client.query(
 					`SELECT
@@ -100,7 +109,7 @@ exports.plugin = {
 						(CASE WHEN "PCIList"."PCI_value" = -1 THEN 100 WHEN "PCIList"."PCI_value" < 0 THEN 0 ELSE "PCIList"."PCI_value" END) AS "PCI_value"
 					FROM
 						"qgis"."pci_${zipCode}" AS "PCIList"
-						LEFT JOIN "qgis"."block_${zipCode}" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
+						LEFT JOIN "qgis"."block_${zipCode}1" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
 					WHERE
 						LENGTH("PCIList"."datestar") != 0 AND "PCIList"."datestar"::date >= $1 AND "PCIList"."datestar"::date < $2
 						AND "blockList"."pci_id" IS NOT NULL
@@ -115,7 +124,7 @@ exports.plugin = {
 						COUNT("PCIList"."qgis_id") AS total
 					FROM
 						"qgis"."pci_${zipCode}" AS "PCIList"
-						LEFT JOIN "qgis"."block_${zipCode}" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
+						LEFT JOIN "qgis"."block_${zipCode}1" AS "blockList" ON "blockList"."pci_id" IS NOT NULL AND LENGTH("blockList"."pci_id") != 0 AND "PCIList"."qgis_id" = "blockList"."id"::numeric
 					WHERE
 						"PCIList"."datestar"::date >= $1 AND "PCIList"."datestar"::date < $2
 						AND "blockList"."pci_id" IS NOT NULL`,
@@ -155,7 +164,7 @@ exports.plugin = {
 				if (timeEnd.length == 0) timeEnd = DateTime.now().toFormat("yyyy-MM-dd");
 				// console.log(timeStart, timeEnd);
 
-				if (![103, 104].includes(zipCode)) {
+				if (![103, 104, 105, 110].includes(zipCode)) {
 					return {
 						statusCode: 20000,
 						message: 'successful',
@@ -208,7 +217,7 @@ exports.plugin = {
 				const start = DateTime.fromISO("2024-01-01");
 				const { months: monthDiff } = start.diffNow(["months"]).toObject();
 
-				if (![103, 104].includes(zipCode)) {
+				if (![103, 104, 105, 110].includes(zipCode)) {
 					return {
 						statusCode: 20000,
 						message: 'successful',
@@ -313,6 +322,27 @@ exports.plugin = {
 							SUM("PCI_value") / COUNT(autoid) AS "PCIAverage"
 						FROM 
 							"qgis"."pci_103" AS PCIList 
+						GROUP BY datestar`
+					);
+					result_PCIAverage = result;
+				} else if (zipCode == 105) {
+					const { rows: result } = await request.pg.client.query(
+						`SELECT 
+							DATE_PART('year', datestar::date)::VARCHAR || '-' || LPAD(DATE_PART('month', datestar::date)::VARCHAR, 2, '0') AS month,
+							SUM("PCI_value") / COUNT(autoid) AS "PCIAverage"
+						FROM 
+							"qgis"."pci_105" AS PCIList 
+						GROUP BY datestar`
+					);
+					result_PCIAverage = result;
+
+				} else if (zipCode == 110) {
+					const { rows: result } = await request.pg.client.query(
+						`SELECT 
+							DATE_PART('year', datestar::date)::VARCHAR || '-' || LPAD(DATE_PART('month', datestar::date)::VARCHAR, 2, '0') AS month,
+							SUM("PCI_value") / COUNT(autoid) AS "PCIAverage"
+						FROM 
+							"qgis"."pci_110" AS PCIList 
 						GROUP BY datestar`
 					);
 					result_PCIAverage = result;
@@ -453,7 +483,7 @@ exports.plugin = {
 				const startDate = DateTime.fromISO(dateStart).minus({ months: 1 }).endOf('day').toISODate();
 				const endDate = DateTime.fromISO(dateEnd).minus({ months: 1 }).endOf('day').toISODate();
 
-				// 103大同區 104中山區
+				// 103大同區 104中山區 105松山區 110信義區
 				if (zipCode === 103) {
 					const res = await request.pg.client.query(`
 						INSERT INTO qgis.pci_103 (dteam, qgis_id, "PCI_value", datestar, dateend) (
@@ -480,6 +510,32 @@ exports.plugin = {
 							WHERE datestar >= '${startDate}' AND datestar < '${endDate}'
 						)
 					`);
+				} else if (zipCode === 105) {
+					const res = await request.pg.client.query(`
+						INSERT INTO qgis.pci_105 (dteam, qgis_id, "PCI_value", datestar, dateend) (
+							SELECT 
+								dteam,
+								qgis_id,
+								"PCI_value",
+								'${dateStart}' AS datestar,
+								'${dateEnd}' AS dateend
+							FROM qgis.pci_105
+							WHERE datestar >= '${startDate}' AND datestar < '${endDate}'
+						)
+					`);					
+				} else if (zipCode === 110) {
+					const res = await request.pg.client.query(`
+						INSERT INTO qgis.pci_110 (dteam, qgis_id, "PCI_value", datestar, dateend) (
+							SELECT 
+								dteam,
+								qgis_id,
+								"PCI_value",
+								'${dateStart}' AS datestar,
+								'${dateEnd}' AS dateend
+							FROM qgis.pci_110	
+							WHERE datestar >= '${startDate}' AND datestar < '${endDate}'
+						)
+					`);			
 				}
 				
         
@@ -787,8 +843,61 @@ exports.plugin = {
 						)
 					`);
 				}
-				
-				
+
+				// 松山
+				if (tenderId == 1051) {
+					// 填滿
+					const fulfill_1051 = await request.pg.client.query(`
+						UPDATE qgis."block_1051" SET "PCI_real" = 100
+						WHERE "PCI_real" < 0 AND "道路名稱" IN (
+							SELECT "roadName" FROM qgis."caseInspectRoute" WHERE "zipCode" = 105 AND "active" IS TRUE
+						)
+					`);
+
+					// 匯入新的資料 (圓餅圖檢查)
+					const importNewData_1051 = await request.pg.client.query(`
+						INSERT INTO qgis."pci_105" ("dteam", "qgis_id", "PCI_value", "datestar", "dateend", "createdatetime")
+						(
+							SELECT
+							1 AS "dteam",
+							"id"::numeric AS "qgis_id",
+							"PCI_real"::float4 AS "PCI_value",
+							'${dateStart}'::text AS "datestar",
+							'${dateEnd}'::text AS "dateend",
+							NOW() AS "createdatetime"
+							FROM qgis."block_1051"
+							WHERE "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0
+						)
+					`);
+				}				
+
+				// 信義
+				if (tenderId == 1101) {
+					// 填滿
+					const fulfill_1101 = await request.pg.client.query(`
+						UPDATE qgis."block_1101" SET "PCI_real" = 100
+						WHERE "PCI_real" < 0 AND "道路名稱" IN (
+							SELECT "roadName" FROM qgis."caseInspectRoute" WHERE "zipCode" = 110 AND "active" IS TRUE
+						)
+					`);
+
+					// 匯入新的資料 (圓餅圖檢查)
+					const importNewData_1101 = await request.pg.client.query(`
+						INSERT INTO qgis."pci_110" ("dteam", "qgis_id", "PCI_value", "datestar", "dateend", "createdatetime")
+						(
+							SELECT
+							1 AS "dteam",
+							"id"::numeric AS "qgis_id",
+							"PCI_real"::float4 AS "PCI_value",
+							'${dateStart}'::text AS "datestar",
+							'${dateEnd}'::text AS "dateend",
+							NOW() AS "createdatetime"
+							FROM qgis."block_1101"
+							WHERE "pci_id" IS NOT NULL AND LENGTH("pci_id") != 0
+						)
+					`);
+				}	
+
 				return {
 					statusCode: 20000,
 					message: 'successful',

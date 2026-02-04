@@ -567,7 +567,31 @@ exports.plugin = {
 						ORDER BY CaseNo = 0, CaseNo
 						LIMIT ? OFFSET ?`,
 						[ String(pageSize), String(offset) ]);
-
+					console.log(`SELECT 
+							caseDistress.SerialNo,
+							caseDistress.CaseNo,
+							caseDistress.DateCreate,
+							caseDistress.DateUpload,
+							caseDistress.DeviceType,
+							caseDistress.Place,
+							caseDistress.DistressType,
+							caseDistress.DistressLevel,
+							caseDistress.ImgZoomIn,
+							caseDistress.ImgZoomOut,
+							IFNULL(PIState, 0) AS PIState,
+							IFNULL(PIStateNotes, '{}') AS PIStateNotes,
+							IFNULL(PCIValue, 0) AS PCIValue,
+							IFNULL(Active, 1) AS Active,
+							IFNULL(OperatorId, 0) AS OperatorId
+						FROM 
+							caseDistress 
+							LEFT JOIN caseDistressPI ON caseDistressPI.caseSID = caseDistress.SerialNo AND caseDistressPI.Active = 1
+						WHERE 
+							NOT (IFNULL(PIState, 0) & 16)
+							AND caseDistress.CaseNo != 0
+							${sqlCMD_filter}
+						ORDER BY CaseNo = 0, CaseNo
+						LIMIT ? OFFSET ?`);
 					[[{ total }]] = await request.tendersql.pool.execute(
 						`SELECT 
 							COUNT(*) AS total 

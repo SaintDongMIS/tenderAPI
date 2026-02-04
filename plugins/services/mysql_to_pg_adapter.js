@@ -23,7 +23,7 @@ exports.plugin = {
                     // 執行查詢 (MySQL 的 execute 方法)
                     execute: async (sql, params) => {
                         // 將 MySQL 語法轉換為 PostgreSQL 語法
-                        const pgSql = convertMySQLToPostgreSQL(sql);
+                        const pgSql = convertMySQLToPostgreSQL(sql, params);
                         const pgParams = convertMySQLParams(params);
                         
                         const client = await pgPool.connect();
@@ -59,7 +59,7 @@ exports.plugin = {
                     // 執行查詢 (MySQL 的 execute 方法)
                     execute: async (sql, params) => {
                         // 將 MySQL 語法轉換為 PostgreSQL 語法
-                        const pgSql = convertMySQLToPostgreSQL(sql);
+                        const pgSql = convertMySQLToPostgreSQL(sql, params);
                         const pgParams = convertMySQLParams(params);
                         
                         const client = await pgPool.connect();
@@ -102,7 +102,7 @@ exports.plugin = {
 };
 
 // 將 MySQL 語法轉換為 PostgreSQL 語法
-function convertMySQLToPostgreSQL(sql) {
+function convertMySQLToPostgreSQL(sql, params) {
     let pgSql = sql;
     
     // 轉換參數佔位符: ? -> $1, $2, ...
@@ -152,6 +152,20 @@ function convertMySQLToPostgreSQL(sql) {
     pgSql = pgSql.replace(/"users"\."Create_By"\s*=\s*"users1"\."UserId"/gsi, '"users"."Create_By"::integer = "users1"."UserId"');
     pgSql = pgSql.replace(/"users_log"\."FromUid"\s*=\s*"users2"\."UserId"/gsi, '"users_log"."FromUid"::integer = "users2"."UserId"');
     
+    // 轉換 NOT (bitwise operation) -> (bitwise operation = 0)
+    // 處理 NOT (expression & number)
+    // 例如: NOT (COALESCE("PIState", 0) & 16) -> ((COALESCE("PIState", 0) & 16) = 0)
+    // PostgreSQL 中 NOT 需要布林值，而 & 運算結果是整數
+    pgSql = pgSql.replace(/NOT\s*\(\s*(.+?)\s*&\s*(\d+)\s*\)/gi, '(($1 & $2) = 0)');
+
+    // 處理 bitwise AND 作為布林值的狀況 (針對 OR/AND 連接的情況)
+    // 例如: ("PIState" & 32) OR ... -> (("PIState" & 32) > 0) OR ...
+    // 針對簡單的情況 (括號內沒有其他括號)
+    // 匹配: (col & val) OR/AND
+    pgSql = pgSql.replace(/(\(\s*[^()]+\s*&\s*\d+\s*\))(\s*)(OR|AND)/gi, '(($1) > 0)$2$3');
+    // 匹配: OR/AND (col & val)
+    pgSql = pgSql.replace(/(OR|AND)(\s*)(\(\s*[^()]+\s*&\s*\d+\s*\))/gi, '$1$2(($3) > 0)');
+
     // 注意：特定欄位名稱大小寫問題現在在 addQuotesToIdentifiers 函數中處理
     
     return pgSql;
@@ -237,25 +251,46 @@ function addQuotesToIdentifiers(sql) {
     result = result.replace(/""/g, '"');
     
     // 在恢復引號後處理特定欄位名稱大小寫問題
-    // 處理 TendersSurvey.ZipCode -> TendersSurvey.zipCode（使用更靈活的匹配）
-    result = result.replace(/"TendersSurvey"\s*\.\s*"ZipCode"/gi, '"TendersSurvey"."zipCode"');
-    result = result.replace(/"TendersSurvey"\s*\.\s*"zipCode"/gi, '"TendersSurvey"."zipCode"');
+    // 使用一個函數來處理所有大小寫轉換，確保順序正確
+    result = fixColumnCaseSensitivity(result);
     
-    // 處理 Tenders.zipCode -> Tenders.ZipCode（使用更靈活的匹配）
-    result = result.replace(/"Tenders"\s*\.\s*"zipCode"/gi, '"Tenders"."ZipCode"');
-    result = result.replace(/"Tenders"\s*\.\s*"ZipCode"/gi, '"Tenders"."ZipCode"');
+    // 處理 TendersSurveyPermission 表的欄位 - 必須在其他轉換之前
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"tenderId"/gi, '"TendersSurveyPermission"."TenderId"');
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"TenderId"/gi, '"TendersSurveyPermission"."TenderId"');
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"surveyId"/gi, '"TendersSurveyPermission"."SurveyId"');
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"SurveyId"/gi, '"TendersSurveyPermission"."SurveyId"');
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"userId"/gi, '"TendersSurveyPermission"."UserId"');
+    result = result.replace(/"TendersSurveyPermission"\s*\.\s*"UserId"/gi, '"TendersSurveyPermission"."UserId"');
     
-    // 處理一般的 zipCode 欄位（預設轉換為大寫 ZipCode）
-    result = result.replace(/"zipCode"/gi, '"ZipCode"');
+    // 處理沒有表名前綴的欄位（在 FROM "TendersSurveyPermission" 之後）
+    // 這是一個更複雜的轉換，需要上下文感知
+    
+    // 轉換 surveyId 和 userId 為 PascalCase (TendersSurveyPermission 等表使用)
+    result = result.replace(/"surveyId"/gi, '"SurveyId"');
+    result = result.replace(/"userId"/gi, '"UserId"');
     
     // 處理其他欄位
     result = result.replace(/"groupId"/gi, '"groupId"');
-    result = result.replace(/"tenderId"/gi, '"tenderId"');
     result = result.replace(/"tenderName"/gi, '"tenderName"');
-    result = result.replace(/"ZipCode"/gi, '"ZipCode"');
+    // 注意：不要在這裡處理 ZipCode，因為 fixColumnCaseSensitivity 已經處理了
     result = result.replace(/"GroupId"/gi, '"groupId"');
-    result = result.replace(/"TenderId"/gi, '"tenderId"');
     result = result.replace(/"TenderName"/gi, '"tenderName"');
+
+    // 處理 tenderId / TenderId 的上下文相關轉換
+    const hasTendersSurveyPermission = result.includes('"TendersSurveyPermission"');
+    const hasTenders = result.includes('"Tenders"');
+    
+    if (hasTendersSurveyPermission && !hasTenders) {
+        // TendersSurveyPermission 使用 TenderId
+        result = result.replace(/"tenderId"/gi, '"TenderId"');
+    } else {
+        // 預設行為：Tenders 表使用 tenderId
+        result = result.replace(/"TenderId"/gi, '"tenderId"');
+    }
+    
+    // 處理 Tenders 表的欄位
+    result = result.replace(/"Tenders"\s*\.\s*"TenderId"/gi, '"Tenders"."tenderId"');
+    result = result.replace(/"Tenders"\s*\.\s*"tenderId"/gi, '"Tenders"."tenderId"');
     
     return result;
 }
@@ -266,13 +301,71 @@ function convertMySQLParams(params) {
         return [];
     }
     
-    return params.map(param => {
+    // 展平嵌套陣列
+    const flattenedParams = [];
+    
+    for (const param of params) {
+        if (Array.isArray(param)) {
+            // 如果參數是陣列，展平它
+            for (const item of param) {
+                flattenedParams.push(item);
+            }
+        } else {
+            flattenedParams.push(param);
+        }
+    }
+    
+    return flattenedParams.map(param => {
         // 處理特殊類型轉換
         if (param === undefined || param === null) {
             return null;
         }
         return param;
     });
+}
+
+// 修復欄位名稱大小寫敏感性
+function fixColumnCaseSensitivity(sql) {
+    let result = sql;
+    
+    // 處理 TendersSurvey.ZipCode -> TendersSurvey.zipCode
+    result = result.replace(/"TendersSurvey"\s*\.\s*"ZipCode"/gi, '"TendersSurvey"."zipCode"');
+    result = result.replace(/"TendersSurvey"\s*\.\s*"zipCode"/gi, '"TendersSurvey"."zipCode"');
+    
+    // 處理 Tenders.zipCode -> Tenders.ZipCode
+    result = result.replace(/"Tenders"\s*\.\s*"zipCode"/gi, '"Tenders"."ZipCode"');
+    result = result.replace(/"Tenders"\s*\.\s*"ZipCode"/gi, '"Tenders"."ZipCode"');
+    
+    // 處理一般的 zipCode 欄位
+    // 使用正則表達式匹配 "zipCode"，但不匹配前面有 TendersSurvey. 的
+    // 這是一個更複雜的匹配，需要處理上下文
+    const zipCodeRegex = /"zipCode"/gi;
+    let lastIndex = 0;
+    let newResult = '';
+    
+    while (true) {
+        const match = zipCodeRegex.exec(result);
+        if (!match) break;
+        
+        // 獲取匹配前的內容
+        const beforeMatch = result.substring(lastIndex, match.index);
+        newResult += beforeMatch;
+        
+        // 檢查前面是否有 TendersSurvey.
+        const context = result.substring(Math.max(0, match.index - 50), match.index);
+        if (context.includes('"TendersSurvey"')) {
+            newResult += '"zipCode"';  // 保持小寫
+        } else {
+            newResult += '"ZipCode"';  // 轉換為大寫
+        }
+        
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // 添加剩餘的內容
+    newResult += result.substring(lastIndex);
+    
+    return newResult;
 }
 
 // 將 PostgreSQL 結果轉換為 MySQL 格式
