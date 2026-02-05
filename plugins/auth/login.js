@@ -248,10 +248,19 @@ exports.plugin = {
 				)
 
 				// step4: 寫入 log
-				await request.accsql.pool.execute(
-					`INSERT INTO users_loginLog (UserId, Ip, LoginTime) VALUES (?, ?, NOW())`,
-					[resUser.UserId, ip]
-				);
+				try {
+					await request.accsql.pool.execute(
+						`INSERT INTO users_loginLog (UserId, Ip, LoginTime) VALUES (?, ?, NOW())`,
+						[resUser.UserId, ip]
+					);
+				} catch (logError) {
+					// 日誌寫入失敗不應該阻止登入
+					console.error('寫入登入日誌失敗:', logError.message);
+					// 如果是主鍵衝突錯誤，可以在這裡添加自動修復或警告日誌
+					if (logError.code === '23505') {
+						console.warn('⚠️ 偵測到序列衝突 - 建議運行 fix_loginlog_sequence.js 修復');
+					}
+				}
 
 				// step5: 寫入 LastLoginTime
 				await request.accsql.pool.execute(
@@ -428,7 +437,18 @@ exports.plugin = {
 						LIMIT ? OFFSET ?`,
 						[timeStart, timeEnd, String(pageSize), String(offset)]
 					);
-
+					console.log(`SELECT 
+							users_loginLog.*, 
+							users1.UserName AS UserName
+						FROM 
+							users_loginLog
+							LEFT JOIN users AS users1 ON users_loginLog.UserId = users1.UserId
+						WHERE
+							LoginTime >= ? AND LoginTime < ?
+						${sqlCMD}
+						ORDER BY
+							users_loginLog.LoginTime DESC
+						LIMIT ? OFFSET ?`);
 					const [[{total}]] = await request.accsql.pool.execute(
 						`SELECT 
 							COUNT(*) AS total 
@@ -771,7 +791,7 @@ exports.plugin = {
 						`UPDATE users SET Notes = ?, Update_At = NOW() WHERE UserId = ?`,
 						[ notes, userId ]
 					);
-					// console.log(res);
+					console.log(`UPDATE users SET Notes = ?, Update_At = NOW() WHERE UserId = ?`);
 
 					// 修改備註到 users_log
 					const objNotes = JSON.stringify({ Notes: notes });

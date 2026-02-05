@@ -12,7 +12,7 @@ exports.plugin = {
             connectionString: process.env.DATABASE_URL,
             max: 20, // 最大連線數
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 2000,
+            connectionTimeoutMillis: 10000, // 增加連線超時時間到 10 秒
         });
         
         // 為 request 物件添加 MySQL 相容層
@@ -105,9 +105,29 @@ exports.plugin = {
 function convertMySQLToPostgreSQL(sql, params) {
     let pgSql = sql;
     
+    // 先處理 IN (?) -> = ANY($1) 的轉換（使用陣列）
+    // 這樣可以解決 MySQL 中一個 ? 代表多個值的問題
+    // 使用正則表達式找出所有 IN (?) 並記錄位置
+    let inIndex = 0;
+    const inPositions = [];
+    pgSql = pgSql.replace(/IN\s*\(\s*\?\s*\)/gi, () => {
+        inPositions.push(inIndex);
+        inIndex++;
+        return '__MYSQL_IN_PLACEHOLDER__';
+    });
+    
     // 轉換參數佔位符: ? -> $1, $2, ...
     let paramIndex = 1;
     pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+    
+    // 將 MySQL IN 佔位符轉換為 PostgreSQL ANY 語法
+    // 並附加類型轉換確保 PostgreSQL 正確解析
+    inIndex = 0;
+    pgSql = pgSql.replace(/__MYSQL_IN_PLACEHOLDER__/g, () => {
+        const paramNum = inPositions[inIndex] + 1;
+        inIndex++;
+        return `= ANY($${paramNum})`; // PostgreSQL 會根據列的類型自動推斷陣列類型
+    });
     
     // 轉換反引號為雙引號，但確保不會創建空引號
     // 先處理反引號包圍的識別符
@@ -137,6 +157,10 @@ function convertMySQLToPostgreSQL(sql, params) {
     
     // 轉換 REGEXP_SUBSTR 為 PostgreSQL 的 substring
     pgSql = pgSql.replace(/REGEXP_SUBSTR\(([^,]+),\s*'([^']+)'\)/gi, "substring($1 from '$2')");
+    
+    // 轉換 ST_GeomFromText 函數 - MySQL 有三個參數，PostgreSQL 只有兩個
+    // 從 ST_GeomFromText(text, srid, 'axis-order=long-lat') 轉換為 ST_GeomFromText(text, srid)
+    pgSql = pgSql.replace(/ST_GeomFromText\(([^,]+),\s*([^,]+),\s*'[^']+'\)/gi, "ST_GeomFromText($1, $2)");
     
     // 為識別符添加雙引號以保持大小寫 (PostgreSQL 大小寫敏感)
     // 匹配表名和欄位名，但不匹配關鍵字、函數名、字串和數字
@@ -188,7 +212,7 @@ function addQuotesToIdentifiers(sql) {
         'begin', 'commit', 'rollback', 'transaction', 'create', 'drop', 'alter',
         'table', 'index', 'view', 'schema', 'database', 'grant', 'revoke', 'user',
         'now', 'current_timestamp', 'current_date', 'current_time', 'desc', 'asc',
-        'using'  // 添加 USING 關鍵字
+        'using', 'any'  // 添加 USING 關鍵字和 ANY 操作符
     ]);
     
     // 函數名列表
@@ -301,45 +325,39 @@ function convertMySQLParams(params) {
         return [];
     }
     
-    // 展平嵌套陣列
-    const flattenedParams = [];
-    
-    for (const param of params) {
-        if (Array.isArray(param)) {
-            // 如果參數是陣列，展平它
-            for (const item of param) {
-                flattenedParams.push(item);
-            }
-        } else {
-            flattenedParams.push(param);
-        }
-    }
-    
-    return flattenedParams.map(param => {
+    // 檢查是否包含 = ANY 語法（處理數組參數）
+    // 如果包含，則不展平陣列，讓 PostgreSQL 直接處理
+    const pgParams = params.map(param => {
         // 處理特殊類型轉換
         if (param === undefined || param === null) {
             return null;
         }
+        // 保持陣列參數不展平，讓 PostgreSQL 的 = ANY() 直接處理
         return param;
     });
+    
+    return pgParams;
 }
 
 // 修復欄位名稱大小寫敏感性
 function fixColumnCaseSensitivity(sql) {
     let result = sql;
     
-    // 處理 TendersSurvey.ZipCode -> TendersSurvey.zipCode
-    result = result.replace(/"TendersSurvey"\s*\.\s*"ZipCode"/gi, '"TendersSurvey"."zipCode"');
-    result = result.replace(/"TendersSurvey"\s*\.\s*"zipCode"/gi, '"TendersSurvey"."zipCode"');
-    
-    // 處理 Tenders.zipCode -> Tenders.ZipCode
+    // 第一步：確保 Tenders 表的 ZipCode 是大寫
     result = result.replace(/"Tenders"\s*\.\s*"zipCode"/gi, '"Tenders"."ZipCode"');
     result = result.replace(/"Tenders"\s*\.\s*"ZipCode"/gi, '"Tenders"."ZipCode"');
     
-    // 處理一般的 zipCode 欄位
-    // 使用正則表達式匹配 "zipCode"，但不匹配前面有 TendersSurvey. 的
-    // 這是一個更複雜的匹配，需要處理上下文
-    const zipCodeRegex = /"zipCode"/gi;
+    // 第二步：處理 TendersSurvey 表的 ZipCode 也是大寫（因為 PostgreSQL 欄位已改為大寫）
+    result = result.replace(/"TendersSurvey"\s*\.\s*"[Zz]ip[Cc]ode"/gi, '"TendersSurvey"."ZipCode"');
+    
+    // 第三步：處理 INSERT INTO TendersSurvey 中的 zipCode -> ZipCode
+    result = result.replace(/INSERT\s+INTO\s+"TendersSurvey"\s*\([^)]*"[Zz]ip[Cc]ode"[^)]*\)/gi, (match) => {
+        return match.replace(/"[Zz]ip[Cc]ode"/gi, '"ZipCode"');
+    });
+    
+    // 第四步：處理任何仍然存在的 ZipCode/zipCode（使用大小寫不敏感的匹配）
+    // 同時匹配大寫和小寫版本
+    const zipCodeRegex = /"[Zz]ip[Cc]ode"/g;
     let lastIndex = 0;
     let newResult = '';
     
@@ -351,12 +369,15 @@ function fixColumnCaseSensitivity(sql) {
         const beforeMatch = result.substring(lastIndex, match.index);
         newResult += beforeMatch;
         
-        // 檢查前面是否有 TendersSurvey.
-        const context = result.substring(Math.max(0, match.index - 50), match.index);
-        if (context.includes('"TendersSurvey"')) {
-            newResult += '"zipCode"';  // 保持小寫
+        // 檢查前面是否有明確的表名前綴
+        const context = result.substring(Math.max(0, match.index - 100), match.index);
+        
+        // 如果前面有 "Tenders". 或 "TendersSurvey".，都使用大寫 ZipCode
+        if (context.includes('"Tenders"') || context.includes('"TendersSurvey"')) {
+            newResult += '"ZipCode"';  // Tenders 和 TendersSurvey 表都使用大寫
         } else {
-            newResult += '"ZipCode"';  // 轉換為大寫
+            // 預設行為：其他表使用大寫
+            newResult += '"ZipCode"';
         }
         
         lastIndex = match.index + match[0].length;
