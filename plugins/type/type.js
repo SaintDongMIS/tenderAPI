@@ -470,10 +470,20 @@ exports.plugin = {
 				const { tenderId, isMap, excludeShadow } = request.query;
 
 				let sql_CMD = "";
-				if(!isMap) sql_CMD += ` AND TendersSurvey.zipCode = 0`;
-				if (excludeShadow) sql_CMD += ` AND isShadow IS FALSE`;
-				if (tenderId.length != 0) sql_CMD += ` AND tenderId = ${tenderId}`;
-				else {
+				let hasConditions = false;
+				
+				if(!isMap) {
+					sql_CMD += ` AND TendersSurvey.zipCode = 0`;
+					hasConditions = true;
+				}
+				if (excludeShadow) {
+					sql_CMD += ` AND isShadow IS FALSE`;
+					hasConditions = true;
+				}
+				if (tenderId.length != 0) {
+					sql_CMD += ` AND tenderId = ${tenderId}`;
+					hasConditions = true;
+				} else {
 					const [ res_permission ] = await request.tendersql.pool.execute(
 						`SELECT TenderId, SurveyId FROM TendersSurveyPermission WHERE UserId = ?`,
 						[ uid ]
@@ -484,11 +494,23 @@ exports.plugin = {
 					const surveyIdList = res_permission.map(survey => survey.SurveyId).filter(surveyId => surveyId != 0);
 					const tenderIdList = res_permission.map(survey => survey.SurveyId == 0 ? survey.TenderId : 0).filter(tenderId => tenderId != 0);
 
-					if (surveyIdList.length != 0 && tenderIdList.length != 0) sql_CMD += ` AND (id IN (${surveyIdList.join(",")}) OR tenderId IN (${tenderIdList.join(",")}))`;
-					else if (surveyIdList.length != 0) sql_CMD += ` AND id IN (${surveyIdList.join(",") })`;
-					else if (tenderIdList.length != 0) sql_CMD += ` AND tenderId IN (${tenderIdList.join(",")})`;
-				}	
-				sql_CMD = sql_CMD.replace("AND", "WHERE");
+					if (surveyIdList.length != 0 && tenderIdList.length != 0) {
+						sql_CMD += ` AND (id IN (${surveyIdList.join(",")}) OR tenderId IN (${tenderIdList.join(",")}))`;
+						hasConditions = true;
+					} else if (surveyIdList.length != 0) {
+						sql_CMD += ` AND id IN (${surveyIdList.join(",")})`;
+						hasConditions = true;
+					} else if (tenderIdList.length != 0) {
+						sql_CMD += ` AND tenderId IN (${tenderIdList.join(",")})`;
+						hasConditions = true;
+					}
+				}
+				
+				if (hasConditions) {
+					sql_CMD = sql_CMD.replace(/^ AND /, "WHERE ");
+				} else {
+					sql_CMD = "";
+				}
 				// console.log(sql_CMD);
 
 				const [ result ] = await request.tendersql.pool.query(
