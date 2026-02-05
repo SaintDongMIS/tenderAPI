@@ -17,12 +17,12 @@ RUN yarn install --production --ignore-engines && yarn cache clean
 COPY . ./
 
 # Expose the port the app runs on
-EXPOSE 3002
+EXPOSE 3004
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
-ENV PORT=3002
+ENV PORT=3004
 ENV MYSQL_ACC_URL='mysql://bimuser:Bim23265946@mysqldb.bim-group.com:3306/account'
 ENV MYSQL_TENDER_URL='mysql://bimuser:Bim23265946@mysqldb.bim-group.com:3306/tenderdb'
 ENV DATABASE_URL='postgres://bimpglink:Bim23265946@mysqldb.bim-group.com:5432/tenderdb'
